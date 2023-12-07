@@ -1,12 +1,8 @@
 name: Create Archive
 on:
   push:
-    branches:
-      - main
-      - 'releases/**'
     tags:
       - "*"
-      - "main"
 jobs:
   build:
     runs-on: ubuntu-latest
