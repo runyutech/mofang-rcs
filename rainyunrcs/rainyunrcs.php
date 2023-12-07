@@ -164,11 +164,19 @@ function rainyunrcs_ChartData($params){
 
 
 function rainyunrcs_TestLink($params)
-{
-    // 直接返回测试通过的结果
-    $result["status"] = 200;
-    $result["data"]["server_status"] = 1;
-    return $result;
+{	
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$url = $params["server_host"] . "/user/";
+	$res = rainyunrcs_Curl($url, null, 10, "GET", $header);
+	if (isset($res["code"]) && $res["code"] == 200) {
+		$result["status"] = 200;
+		$result["data"]["server_status"] = 1;
+	} else {
+		$result["status"] = 200;
+		$result["data"]["server_status"] = 0;
+		$result["data"]["msg"] = "未知错误";
+	}
+	return $result;
 }
 function rainyunrcs_ClientArea($params)
 {
