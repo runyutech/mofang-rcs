@@ -1,7 +1,7 @@
 <?php
 function mofang_rcs_MetaData()
 {
-	return ["DisplayName" => "mofang_rcs", "APIVersion" => "1.1", "HelpDoc" => "https://forum.rainyun.com/t/topic/5557"];
+	return ["DisplayName" => "mofang_rcs", "APIVersion" => "1.1", "HelpDoc" => "https://forum.rainyun.com/t/topic/5552"];
 }
 function mofang_rcs_ConfigOptions()
 {
