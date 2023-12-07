@@ -1,9 +1,9 @@
 <?php
-function mofang_rcs_MetaData()
+function rainyunrcs_MetaData()
 {
-	return ["DisplayName" => "mofang_rcs", "APIVersion" => "1.1", "HelpDoc" => "https://forum.rainyun.com/t/topic/5552"];
+	return ["DisplayName" => "RainyunRcs", "APIVersion" => "1.1", "HelpDoc" => "https://forum.rainyun.com/t/topic/5552"];
 }
-function mofang_rcs_ConfigOptions()
+function rainyunrcs_ConfigOptions()
 {
 	return [
 		["type" => "text", "name" => "type", "description" => "开通类型(必填)", "default" => "rcs", "key" => "type"], 
@@ -16,7 +16,7 @@ function mofang_rcs_ConfigOptions()
 }
 
 // 图表信息
-function mofang_rcs_Chart(){
+function rainyunrcs_Chart(){
 	return [
 		'cpu'=>[
 			'title'=>'CPU 占用',
@@ -45,8 +45,8 @@ function mofang_rcs_Chart(){
 }
 
 // 图表数据
-function mofang_rcs_ChartData($params){
-	$vserverid = mofang_rcs_GetServerid($params);
+function rainyunrcs_ChartData($params){
+	$vserverid = rainyunrcs_GetServerid($params);
 	if(empty($vserverid)){ return ['status'=>'error', 'msg'=>'数据获取失败']; }
 	
 	// 请求数据
@@ -54,7 +54,7 @@ function mofang_rcs_ChartData($params){
 	$end = $_GET["end"]/1000 ? $_GET["end"]/1000 : time();
 	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/monitor/?start_date=".$start."&end_date=".$end;
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$res = mofang_rcs_Curl($url, null, 30, "GET", $header);
+	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
 
 	// var_dump($res);
 	if($res['code'] == 200){
@@ -163,61 +163,61 @@ function mofang_rcs_ChartData($params){
 }
 
 
-function mofang_rcs_TestLink($params)
+function rainyunrcs_TestLink($params)
 {
     // 直接返回测试通过的结果
     $result["status"] = 200;
     $result["data"]["server_status"] = 1;
     return $result;
 }
-function mofang_rcs_ClientArea($params)
+function rainyunrcs_ClientArea($params)
 {
 	if ($params["configoptions"]["with_eip_num"] == "0") {
 		$panel = ["NAT" => ["name" => "NAT转发"]];
 	}
 	return $panel;
 }
-function mofang_rcs_ClientAreaOutput($params, $key)
+function rainyunrcs_ClientAreaOutput($params, $key)
 {
-	$vserverid = mofang_rcs_GetServerid($params);
+	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
 		return "产品参数错误";
 	}
 	if ($key == "NAT") {
 		$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 		$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
-		$res = mofang_rcs_Curl($detail_url, [], 10, "GET", $header);
+		$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 		return ["template" => "templates/NAT.html", "vars" => ["list" => $res["data"]["NatList"], "ip" => $res["data"]["Data"]["NatPublicIP"]]];
 	}
 }
-function mofang_rcs_AllowFunction()
+function rainyunrcs_AllowFunction()
 {
 	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat"]];
 }
-function mofang_rcs_CrackPassword($params, $new_pass)
+function rainyunrcs_CrackPassword($params, $new_pass)
 {
-	$vserverid = mofang_rcs_GetServerid($params);
+	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
 		return "服务器不存在";
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/reset-password";
 	$post_data = "\n{\n    \"password\": \"" . $new_pass . "\"\n}\n";
-	$res = mofang_rcs_Curl($url, $post_data, 30, "POST", $header);
+	$res = rainyunrcs_Curl($url, $post_data, 30, "POST", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
 		return ["status" => "success", "msg" => "重置密码成功"];
 	} else {
 		return ["status" => "error", "msg" => $res["message"] ?: "重置密码失败"];
 	}
 }
-function mofang_rcs_addNat($params)
+function rainyunrcs_addNat($params)
 {
 	$post = input("post.");
-	$vserverid = mofang_rcs_GetServerid($params);
+	$vserverid = rainyunrcs_GetServerid($params);
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/nat";
 	$post_data = "\n\n{\n    \"port_in\": " . trim($post["port_in"]) . ",\n    \"port_out\": " . trim($post["port_out"]) . ",\n    \"port_type\": \"" . trim($post["port_type"]) . "\"\n}\n\n";
-	$res = mofang_rcs_Curl($url, $post_data, 30, "POST", $header);
+	$res = rainyunrcs_Curl($url, $post_data, 30, "POST", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
 		$description = sprintf("NAT转发添加成功");
 		$result = ["status" => "success", "msg" => $res["data"]];
@@ -229,13 +229,13 @@ function mofang_rcs_addNat($params)
 	active_logs($description, $params["uid"], 2, 2);
 	return $result;
 }
-function mofang_rcs_delNat($params)
+function rainyunrcs_delNat($params)
 {
 	$post = input("post.");
-	$vserverid = mofang_rcs_GetServerid($params);
+	$vserverid = rainyunrcs_GetServerid($params);
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/nat/?nat_id=" . trim($post["nat_id"]);
-	$res = mofang_rcs_Curl($url, [], 30, "DELETE", $header);
+	$res = rainyunrcs_Curl($url, [], 30, "DELETE", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
 		$description = sprintf("NAT转发删除成功");
 		$result = ["status" => "success", "msg" => $res["data"]];
@@ -249,9 +249,9 @@ function mofang_rcs_delNat($params)
 }
 
 
-function mofang_rcs_Renew($params)
+function rainyunrcs_Renew($params)
 {
-    $vserverid = mofang_rcs_GetServerid($params);
+    $vserverid = rainyunrcs_GetServerid($params);
     if ($params["billingcycle"] == "monthly") {
         $duration = "1";
     } elseif ($params["billingcycle"] == "annually") {
@@ -266,10 +266,10 @@ function mofang_rcs_Renew($params)
     $header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
     $url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/renew";
     $post_data = "\n\n{\n    \"duration\": " . $duration . ",\n    \"with_coupon_id\": 0\n}\n\n";
-    $res = mofang_rcs_Curl($url, $post_data, 30, "POST", $header);
+    $res = rainyunrcs_Curl($url, $post_data, 30, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
         $detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
-        $res1 = mofang_rcs_Curl($detail_url, [], 10, "GET", $header);
+        $res1 = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
         $str = $res1["Data"]["ExpDate"];
         $str1 = $res1["data"]["Data"]["MonthPrice"];
         $str2 = date("Y-m-d H:i:s", $res1["data"]["Data"]["ExpDate"]);
@@ -314,9 +314,9 @@ function writeLog($log)
     file_put_contents($logFile, json_encode($existingLogs, JSON_PRETTY_PRINT));
 }
 
-function mofang_rcs_Reinstall($params)
+function rainyunrcs_Reinstall($params)
 {
-    $vserverid = mofang_rcs_GetServerid($params);
+    $vserverid = rainyunrcs_GetServerid($params);
     if (empty($vserverid)) {
         return "产品参数错误";
     }
@@ -326,7 +326,7 @@ function mofang_rcs_Reinstall($params)
     $header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
     $url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/changeos";
     $post_data = "\n\n{\n    \"os_id\": " . $params["reinstall_os"] . "\n}\n\n";
-    $res = mofang_rcs_Curl($url, $post_data, 30, "POST", $header);
+    $res = rainyunrcs_Curl($url, $post_data, 30, "POST", $header);
     if ($res["code"] == 200) {
         if (stripos($params["reinstall_os_name"], "win") !== false) {
             $username = "administrator";
@@ -336,7 +336,7 @@ function mofang_rcs_Reinstall($params)
         \think\Db::name("host")->where("id", $params["hostid"])->update(["username" => $username]);
         // 密码重置成功后，发送 GET 请求获取密码
         $password_url = $params["server_host"] . "/product/rcs/" . $vserverid . "/";
-        $password_res = mofang_rcs_Curl($password_url, null, 30, "GET", $header);
+        $password_res = rainyunrcs_Curl($password_url, null, 30, "GET", $header);
 
         if (isset($password_res["code"]) && $password_res["code"] == 200) {
             $sys_pwd = $password_res['data']['Data']['DefaultPass']; // 获取DefaultPass项内容
@@ -355,9 +355,9 @@ function mofang_rcs_Reinstall($params)
 
 
 
-function mofang_rcs_CreateAccount($params)
+function rainyunrcs_CreateAccount($params)
 {
-    $vserverid = mofang_rcs_GetServerid($params);
+    $vserverid = rainyunrcs_GetServerid($params);
     if (!empty($vserverid)) {
         return "已开通,不能重复开通";
     }
@@ -380,12 +380,12 @@ function mofang_rcs_CreateAccount($params)
         $eip = $params["configoptions"]["with_eip_num"];
     }
     $post_data = "\n{\n    \"duration\": " . $duration . ",\n    \"plan_id\": " . $params["configoptions"]["plan_id"] . ",\n    \"os_id\": " . $params["configoptions"]["os_id"] . ",\n    \"with_eip_flags\": \"\",\n    \"with_eip_num\": " . $eip . "\n}\n";
-    $res = mofang_rcs_Curl($url, $post_data, 10, "POST", $header);
+    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
         $server_id = $res["data"]["ID"];
         $sys_pwd = $res["data"]["DefaultPass"];
         $detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $server_id;
-        $res1 = mofang_rcs_Curl($detail_url, [], 10, "GET", $header);
+        $res1 = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
         $natip = $res1["data"]["Data"]["NatPublicIP"];
         $ipv4 = $res1["data"]["Data"]["MainIPv4"];
         $customid = \think\Db::name("customfields")->where("type", "product")->where("relid", $params["productid"])->where("fieldname", "vserverid")->value("id");
@@ -425,15 +425,15 @@ function mofang_rcs_CreateAccount($params)
     }
 }
 
-function mofang_rcs_Status($params)
+function rainyunrcs_Status($params)
 {
-	$vserverid = mofang_rcs_GetServerid($params);
+	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
 		return "产品参数错误";
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
-	$res = mofang_rcs_Curl($detail_url, [], 10, "GET", $header);
+	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
 		if ($res["data"]["Data"]["Status"] == "running") {
 			$result["status"] = "success";
@@ -468,15 +468,15 @@ function mofang_rcs_Status($params)
 		}
 	}
 }
-function mofang_rcs_On($params)
+function rainyunrcs_On($params)
 {
-    $vserverid = mofang_rcs_GetServerid($params);
+    $vserverid = rainyunrcs_GetServerid($params);
     if (empty($vserverid)) {
         return "产品参数错误";
     }
 
     // 获取服务器当前状态
-    $status = mofang_rcs_Status($params, $vserverid);
+    $status = rainyunrcs_Status($params, $vserverid);
     if ($status["data"]["status"] == "on") {
         return "开机失败，当前已经是开机状态";
     }
@@ -485,7 +485,7 @@ function mofang_rcs_On($params)
     $url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/start";
     $post_data = [];
     $post_data["id"] = $vserverid;
-    $res = mofang_rcs_Curl($url, $post_data, 10, "POST", $header);
+    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
 
     if (isset($res["code"]) && $res["code"] == 200) {
         return ["status" => "success", "msg" => "开机成功"];
@@ -499,9 +499,9 @@ function mofang_rcs_On($params)
     }
 }
 
-function mofang_rcs_Off($params)
+function rainyunrcs_Off($params)
 {
-	$vserverid = mofang_rcs_GetServerid($params);
+	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
 		return "产品参数错误";
 	}
@@ -509,16 +509,16 @@ function mofang_rcs_Off($params)
 	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/stop";
 	$post_data = [];
 	$post_data["id"] = $vserverid;
-	$res = mofang_rcs_Curl($url, $post_data, 10, "POST", $header);
+	$res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
 		return ["status" => "success", "msg" => "关机成功"];
 	} else {
 		return ["status" => "error", "msg" => "关机失败，原因：" . $res["message"]];
 	}
 }
-function mofang_rcs_Reboot($params)
+function rainyunrcs_Reboot($params)
 {
-	$vserverid = mofang_rcs_GetServerid($params);
+	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
 		return "产品参数错误";
 	}
@@ -526,7 +526,7 @@ function mofang_rcs_Reboot($params)
 	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/reboot";
 	$post_data = [];
 	$post_data["id"] = $vserverid;
-	$res = mofang_rcs_Curl($url, $post_data, 10, "POST", $header);
+	$res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
 		return ["status" => "success", "msg" => "重启成功"];
 	} else {
@@ -535,22 +535,22 @@ function mofang_rcs_Reboot($params)
 }
 
 // VNC部分
-function mofang_rcs_Vnc($params){
-    $vserverid = mofang_rcs_GetServerid($params);
+function rainyunrcs_Vnc($params){
+    $vserverid = rainyunrcs_GetServerid($params);
 	// 请求数据
 	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/vnc/?console_type=" . ( $_GET["console"] == "xtermjs" ? "xtermjs": "novnc" );
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$res = mofang_rcs_Curl($url, null, 30, "GET", $header);
+	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
 	if ($res["code"] != 200) return ["status" => "error", "msg" => "连接 VNC 请求失败，请稍后再试"];
 	$data = $res["data"];
-	return ["status" => "success", "url" => "/plugins/servers/mofang_rcs/handlers/vncRedirect.php?RequestURL=".rawurlencode($data["RequestURL"])."&RedirectURL=".rawurlencode($data["RedirectURL"])."&PVEAuth=".rawurlencode($data["PVEAuth"]), "pass" => "YanJi-1116"];
+	return ["status" => "success", "url" => "/plugins/servers/rainyunrcs/handlers/vncRedirect.php?RequestURL=".rawurlencode($data["RequestURL"])."&RedirectURL=".rawurlencode($data["RedirectURL"])."&PVEAuth=".rawurlencode($data["PVEAuth"]), "pass" => "YanJi-1116"];
 }
 
-function mofang_rcs_GetServerid($params)
+function rainyunrcs_GetServerid($params)
 {
 	return $params["customfields"]["vserverid"];
 }
-function mofang_rcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST", $header = [])
+function rainyunrcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST", $header = [])
 {
 	$curl = curl_init();
 	if ($request == "GET") {
@@ -568,7 +568,7 @@ function mofang_rcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST"
 		curl_setopt($curl, CURLOPT_URL, $url);
 	}
 	curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
-	curl_setopt($curl, CURLOPT_USERAGENT, "Lolipa");
+	curl_setopt($curl, CURLOPT_USERAGENT, "Mofang");
 	curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1);
 	curl_setopt($curl, CURLOPT_HEADER, 0);
 	curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
