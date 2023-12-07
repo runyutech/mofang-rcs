@@ -1,6 +1,9 @@
 name: Create Archive
 on:
   push:
+    branches:
+      - main
+      - 'releases/**'
     tags:
       - "*"
       - "main"
