@@ -200,7 +200,7 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 }
 function rainyunrcs_AllowFunction()
 {
-	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat"]];
+	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat", "ssh", "xtermjs"]];
 }
 function rainyunrcs_CrackPassword($params, $new_pass)
 {
@@ -377,6 +377,9 @@ function rainyunrcs_CreateAccount($params)
         $duration = "3";
     } elseif ($params["billingcycle"] == "semiannually") {
         $duration = "6";
+    } elseif ($params["billingcycle"] == "ontrial") {
+        $duration = "1";
+        $try = "true";
     } else {
         $duration = "1";
     }
@@ -387,7 +390,13 @@ function rainyunrcs_CreateAccount($params)
     } else {
         $eip = $params["configoptions"]["with_eip_num"];
     }
-    $post_data = "\n{\n    \"duration\": " . $duration . ",\n    \"plan_id\": " . $params["configoptions"]["plan_id"] . ",\n    \"os_id\": " . $params["configoptions"]["os_id"] . ",\n    \"with_eip_flags\": \"\",\n    \"with_eip_num\": " . $eip . "\n}\n";
+    if($params["configoptions"]["os_id"]==="true"){
+        $try = $params["configoptions"]["os_id"];
+    }
+    if(empty($try)){
+        $try = "false";
+    }
+    $post_data = "\n{\n    \"duration\": " . $duration . ",\n    \"plan_id\": " . $params["configoptions"]["plan_id"] . ",\n    \"os_id\": " . $params["configoptions"]["os_id"] . ",\n    \"try\": " . $try . ",\n    \"with_eip_flags\": \"\",\n    \"with_eip_num\": " . $eip . "\n}\n";
     $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
         $server_id = $res["data"]["ID"];
@@ -429,7 +438,7 @@ function rainyunrcs_CreateAccount($params)
         \think\Db::name("host")->where("id", $params["hostid"])->update($update);
         return "ok";
     } else {
-        return ["status" => "error", "msg" => "开通失败，原因：" . $res["message"]];
+        return ["status" => "error", "msg" => "开通失败，原因：" . $res["message"].$post_data];
     }
 }
 
@@ -546,12 +555,51 @@ function rainyunrcs_Reboot($params)
 function rainyunrcs_Vnc($params){
     $vserverid = rainyunrcs_GetServerid($params);
 	// 请求数据
-	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/vnc/?console_type=" . ( $_GET["console"] == "xtermjs" ? "xtermjs": "novnc" );
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/vnc/?console_type=" . ( $params['rainyunrcs_console'] == "xtermjs" ? "xtermjs": "novnc" );
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
-	if ($res["code"] != 200) return ["status" => "error", "msg" => "连接 VNC 请求失败，请稍后再试"];
+	if ($res["code"] != 200){
+	    return ["status" => "error", "msg" => "连接 VNC 请求失败，请稍后再试"];
+	}
 	$data = $res["data"];
-	return ["status" => "success", "url" => "/plugins/servers/rainyunrcs/handlers/vncRedirect.php?RequestURL=".rawurlencode($data["RequestURL"])."&RedirectURL=".rawurlencode($data["RedirectURL"])."&PVEAuth=".rawurlencode($data["PVEAuth"]), "pass" => "YanJi-1116"];
+	$urlcs =  isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+	$urlcs .= "://" . $_SERVER['HTTP_HOST'];
+	if(empty($data['VNCProxyURL'])){
+	    return ["status" => "success", "url" => "$urlcs/plugins/servers/rainyunrcs/handlers/vncRedirect.php?RequestURL=".rawurlencode($data["RequestURL"])."&RedirectURL=".rawurlencode($data["RedirectURL"])."&PVEAuth=".rawurlencode($data["PVEAuth"]), "pass" => "YanJi-1116"];
+	}else{
+	    return ["status" => "success", "url" => $data["VNCProxyURL"], "pass" => "YanJi-1116"];
+	}
+}
+
+function rainyunrcs_xtermjs($params){
+    $post = input('post.');
+    $params['rainyunrcs_console'] = $post['func'];
+    $vnc = rainyunrcs_Vnc($params);
+    if($vnc['status']==="success"){
+        return ["status" => "success", "msg" => "VNC启动成功<script type='text/javascript'>window.open('$vnc[url]', '_blank');</script>"];
+    }
+}
+
+function rainyunrcs_ClientButton($params){
+    $os_info = \think\Db::name("host_config_options")->alias("a")->field("c.option_name")->leftJoin("product_config_options b", "a.configid=b.id")->leftJoin("product_config_options_sub c", "a.optionid=c.id")->where("a.relid", $params["hostid"])->where("b.option_type", 5)->find();
+    if (stripos($os_info["option_name"], "win") === false) {
+         $button = [
+                   'xtermjs'=>[
+                            'place'=>'console',   // 支持control和console 分别输出在控制和控制台
+                            'name'=>'Xtermjs'     // 按钮名称
+                   ],
+                   'ssh'=>[
+                            'place'=>'console',   // 支持control和console 分别输出在控制和控制台
+                            'name'=>'SSH'     // 按钮名称
+                   ],
+         ];
+         return $button;
+    }
+}
+
+function rainyunrcs_ssh($params){
+    $url="https://ssh.mhjz1.cn/?hostname=".$params['dedicatedip']."&username=".$params['username']."&password=".base64_encode($params['password']);
+    return ["status" => "success", "msg" => "SSH启动成功<script type='text/javascript'>window.open('$url', '_blank');</script>"];
 }
 
 function rainyunrcs_GetServerid($params)
