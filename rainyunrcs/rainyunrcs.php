@@ -180,7 +180,11 @@ function rainyunrcs_TestLink($params)
 }
 function rainyunrcs_ClientArea($params)
 {
-	if ($params["configoptions"]["with_eip_num"] == "0") {
+    $vserverid = rainyunrcs_GetServerid($params);
+    $url = $params["server_host"] . "/product/rcs/" . $vserverid;
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
+	if ($res["data"]["Data"]["MainIPv4"] == "-") {
 		$panel = ["NAT" => ["name" => "NAT转发"]];
 	}
 	return $panel;
@@ -231,7 +235,7 @@ function rainyunrcs_addNat($params)
 		$result = ["status" => "success", "msg" => $res["data"]];
 	} else {
 		$description = sprintf("NAT转发添加失败 - Host ID:%d", $params["hostid"]);
-		$result = ["status" => "error", "msg" => $res["msg"] ?: "NAT转发添加失败"];
+		$result = ["status" => "error", "msg" => $res["message"] ?: "NAT转发添加失败"];
 	}
 	active_logs($description, $params["uid"], 2);
 	active_logs($description, $params["uid"], 2, 2);
@@ -423,11 +427,26 @@ function rainyunrcs_CreateAccount($params)
         } else {
             $username = "root";
         }
-        if ($ipv4 == "-") {
-            $update["dedicatedip"] = $natip;
-        } else {
-            $update["dedicatedip"] = $ipv4;
-        }
+		// 存入IP
+		$ip = [];
+		if($res1["data"]["Data"]["MainIPv4"] == "-"){
+		    $update["dedicatedip"] = $res1["data"]["Data"]["NatPublicIP"];
+		    foreach(array_reverse($res1['data']['NatList']) as $h){
+		        if($h['PortIn']==22){
+		            $update['port'] = $h['PortOut'];
+		        }
+		    }
+		}else{
+		    foreach($res1['data']['EIPList'] as $v){
+		        if($res1["data"]["Data"]["MainIPv4"] === $v['IP']){
+		            $update["dedicatedip"] = $res1["data"]["Data"]["MainIPv4"];
+		        }else{
+		            $ip[] = $v['IP'];
+		        }
+		    }
+		   $update['port'] = 0;
+		}
+		$update['assignedips'] = implode(',', $ip);
         $update["domainstatus"] = "Active";
         $update["username"] = $username;
         $update["domain"] = $params["domain"];
@@ -438,7 +457,7 @@ function rainyunrcs_CreateAccount($params)
         \think\Db::name("host")->where("id", $params["hostid"])->update($update);
         return "ok";
     } else {
-        return ["status" => "error", "msg" => "开通失败，原因：" . $res["message"].$post_data];
+        return ["status" => "error", "msg" => "开通失败，原因：" . $res["message"]];
     }
 }
 
@@ -485,6 +504,52 @@ function rainyunrcs_Status($params)
 		}
 	}
 }
+
+function rainyunrcs_Sync($params)
+{
+    $vserverid = rainyunrcs_GetServerid($params);
+	if(empty($vserverid)){
+		return '产品参数错误';
+	}
+    $url = $params["server_host"] . "/product/rcs/" . $vserverid;
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
+	if(isset($res['code']) && $res['code'] == 200){
+		// 存入IP
+		$ip = [];
+		if($res["data"]["Data"]["MainIPv4"] == "-"){
+		    $update["dedicatedip"] = $res["data"]["Data"]["NatPublicIP"];
+		    foreach(array_reverse($res['data']['NatList']) as $h){
+		        if($h['PortIn']==22){
+		            $update['port'] = $h['PortOut'];
+		        }
+		    }
+		}else{
+		    foreach($res['data']['EIPList'] as $v){
+		        if($res["data"]["Data"]["MainIPv4"] === $v['IP']){
+		            $update["dedicatedip"] = $res["data"]["Data"]["MainIPv4"];
+		        }else{
+		            $ip[] = $v['IP'];
+		        }
+		    }
+		   $update['port'] = 0;
+		}
+		$update['assignedips'] = implode(',', $ip);
+		$update['password'] = cmf_encrypt($res['data']['Data']['DefaultPass']);
+		$update['domain'] = $params["domain"];
+  		$os_info = \think\Db::name("host_config_options")->alias("a")->field("c.option_name")->leftJoin("product_config_options b", "a.configid=b.id")->leftJoin("product_config_options_sub c", "a.optionid=c.id")->where("a.relid", $params["hostid"])->where("b.option_type", 5)->find();
+        if (stripos($os_info["option_name"], "win") !== false) {
+            $update['username'] = "administrator";
+        } else {
+            $update['username'] = "root";
+        }
+		Db::name('host')->where('id', $params['hostid'])->update($update);
+		return ['status'=>'success', 'msg'=>$res['message']];
+	}else{
+		return ['status'=>'error', 'msg'=>$res['message'] ?: '同步失败'];
+	}
+}
+
 function rainyunrcs_On($params)
 {
     $vserverid = rainyunrcs_GetServerid($params);
@@ -536,8 +601,11 @@ function rainyunrcs_Off($params)
 function rainyunrcs_Reboot($params)
 {
 	$vserverid = rainyunrcs_GetServerid($params);
-	if (empty($vserverid)) {
-		return "产品参数错误";
+	if(empty($vserverid)){
+        $vserverid = intval($params['old_configoptions']['customfields']['vserverid']);
+        if (empty($vserverid)){
+            return '产品参数错误';
+        }
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/reboot";
@@ -549,6 +617,28 @@ function rainyunrcs_Reboot($params)
 	} else {
 		return ["status" => "error", "msg" => "重启失败，原因：" . $res["message"]];
 	}
+}
+
+function rainyunrcs_ChangePackage($params)
+{
+	$vserverid = rainyunrcs_GetServerid($params);
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	if (empty($vserverid)) {
+		return "产品参数错误";
+	}
+	if(isset($params['configoptions_upgrade']['with_eip_num'])){
+		$ip_num = $params['configoptions']['with_eip_num'];
+		$old_ip_num = $params['old_configoptions']['with_eip_num'];
+		if($ip_num > $old_ip_num){
+		    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/eip/";
+		    $post_data = "\n\n{\n    \"with_ip_num\": " . intval($ip_num - $old_ip_num) . "\n}\n\n";
+		    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
+		}
+	}
+	rainyunrcs_Sync($params);
+	$result['status'] = 'success';
+	$result['msg'] = $res['message'] ?: '升级成功';
+	return $result;
 }
 
 // VNC部分
