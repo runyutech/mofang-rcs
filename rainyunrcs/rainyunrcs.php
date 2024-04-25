@@ -692,6 +692,49 @@ function rainyunrcs_ssh($params){
     return ["status" => "success", "msg" => "SSH启动成功<script type='text/javascript'>window.open('$url', '_blank');</script>"];
 }
 
+function rainyunrcs_FiveMinuteCron() {
+	$serverRows = \think\Db::name('servers')  
+	            ->where('type', 'rainyunrcs')  
+	            ->field('hostname, password, gid')  
+	            ->select();
+	$result = [];
+	foreach ($serverRows as $serverRow) {
+		$productRows = \think\Db::name('products')  
+		                ->where('server_group', $serverRow['gid'])  
+		                ->field('id, config_option3')  
+		                ->select();
+		if (!empty($productRows)) {
+			$result[] = [  
+			                    'server' => [  
+			                        'host' => $serverRow['hostname'],  
+			                        'password' => $serverRow['password'],
+			                    ],  
+			                    'products' => $productRows,  
+			                ];
+		}
+	}
+	foreach ($result as $item) {
+		$server = $item['server'];
+		$host = $server['host'];
+		$password = $server['password'];
+		$gid = $server['gid'];
+		foreach ($item['products'] as $product) {
+			$id = $product['id'];
+			$pid = $product['config_option3'];
+			$url = $host . "/product/rcs/plans";
+			$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $password];
+			$res = rainyunrcs_Curl($url, null, 30, "GET", $header)['data'];
+			foreach ($res as $product) {
+				if ($product['id'] == $pid) {
+					$availableStock = $product['available_stock'];
+					break;
+				}
+			}
+			\think\Db::name("products")->where("id", $id)->update(["qty" => $availableStock]);
+		}
+	}
+}
+
 function rainyunrcs_GetServerid($params)
 {
 	return $params["customfields"]["vserverid"];
