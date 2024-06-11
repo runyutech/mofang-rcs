@@ -11,7 +11,13 @@ function rainyunrcs_ConfigOptions()
 		["type" => "text", "name" => "plan_id", "description" => "套餐ID(必填)", "key" => "plan_id"], 
 		["type" => "text", "name" => "try", "description" => "是否试用(选填)", "default" => "false", "key" => "try"],
 		["type" => "text", "name" => "with_coupon_id", "description" => "优惠券id(选填)", "default" => "0", "key" => "with_coupon_id"], 
-		["type" => "text", "name" => "with_eip_num", "description" => "附加独立ip(选填)", "default" => "0", "key" => "with_eip_num"]
+		["type" => "text", "name" => "with_eip_num", "description" => "附加独立ip(选填)", "default" => "0", "key" => "with_eip_num"],
+		["type" => "text", "name" => "disk_ssd_unit_price", "description" => "高速固态单价(每G每月)", "default" => "0.4", "key" => "disk_ssd_unit_price"],
+		["type" => "text", "name" => "disk_hdd_unit_price", "description" => "高速机械单价(每G每月)", "default" => "0.1", "key" => "disk_hdd_unit_price"],
+		["type" => "text", "name" => "disk_chdd_unit_price", "description" => "系统机械单价(每G每月)", "default" => "0.2", "key" => "disk_chdd_unit_price"],
+		["type" => "text", "name" => "disk_bak", "description" => "备份支持(每G每月)", "default" => "0.1", "key" => "disk_bak"],
+		["type" => "text", "name" => "traffic300", "description" => "流量(300GB)", "default" => "10", "key" => "traffic300"],
+		["type" => "text", "name" => "traffic1024", "description" => "流量(1024GB)", "default" => "20", "key" => "traffic1024"]
 	];
 }
 
@@ -184,8 +190,12 @@ function rainyunrcs_ClientArea($params)
     $url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
+	if($res["data"]["Data"]["TrafficBytes"] || $res["data"]["Data"]["TrafficResetDate"] || $res["data"]["Data"]["TrafficBytesToday"]){
+	    $panel["Traffic"] = ["name" => "流量/带宽"];
+	}
+	$panel["DiskList"] = ["name" => "弹性云盘"];
 	if ($res["data"]["Data"]["MainIPv4"] == "-") {
-		$panel = ["NAT" => ["name" => "NAT转发"]];
+		$panel["NAT"] = ["name" => "NAT转发"];
 	}
 	return $panel;
 }
@@ -195,16 +205,39 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 	if (empty($vserverid)) {
 		return "产品参数错误";
 	}
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 	if ($key == "NAT") {
-		$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-		$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
-		$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 		return ["template" => "templates/NAT.html", "vars" => ["list" => $res["data"]["NatList"], "ip" => $res["data"]["Data"]["NatPublicIP"]]];
+	}elseif($key == "DiskList"){
+	    return [
+			'template'=>'templates/DiskList.html',
+			'vars'=>[
+			    "list"=>$res["data"],
+			    "disk_ssd_unit_price"=>$params["configoptions"]["disk_ssd_unit_price"] ?: 0.4,
+			    "disk_hdd_unit_price"=>$params["configoptions"]["disk_hdd_unit_price"] ?: 0.1,
+			    "disk_chdd_unit_price"=>$params["configoptions"]["disk_chdd_unit_price"] ?: 0.2,
+			    "disk_bak"=>$params["configoptions"]["disk_bak"] ?: 0.1
+			]
+		];
+	}elseif($key == "Traffic"){
+	    return [
+			'template'=>'templates/Traffic.html',
+			'vars'=>[
+			    "list"=>$res["data"],
+			    "billingcycle"=>$params["billingcycle"],
+			    "time"=>date("Y年m月d日", $res["data"]["Data"]["TrafficResetDate"]),
+			    "TrafficToday"=>round($res["data"]["Data"]["TrafficBytesToday"]/ 1048576, 1),
+			    "TrafficDayLimit"=>round($res["data"]["Data"]["TrafficBytesDayLimit"]/ 1073741824, 1),
+			    "TrafficOnLimit"=>$res["data"]["Data"]["TrafficOnLimit"]
+			]
+		];
 	}
 }
 function rainyunrcs_AllowFunction()
 {
-	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat", "ssh", "xtermjs"]];
+	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat", "ssh", "xtermjs" , "getCloudMonthFee" ,"edisk" ,"getCloudtzMonthFee" ,"trafficlimit" ,"trafficcharge"]];
 }
 function rainyunrcs_CrackPassword($params, $new_pass)
 {
@@ -451,6 +484,7 @@ function rainyunrcs_CreateAccount($params)
         $update["username"] = $username;
         $update["domain"] = $params["domain"];
         $update["password"] = cmf_encrypt($sys_pwd);
+        $update['nextduedate'] = $res1["data"]["Data"]['ExpDate'];
         if (empty($os_info)) {
             $update["os"] = $params["configoptions"]["os_id"];
         }
@@ -511,8 +545,8 @@ function rainyunrcs_Sync($params)
 	if(empty($vserverid)){
 		return '产品参数错误';
 	}
-    $url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
 	if(isset($res['code']) && $res['code'] == 200){
 		// 存入IP
@@ -537,6 +571,7 @@ function rainyunrcs_Sync($params)
 		$update['assignedips'] = implode(',', $ip);
 		$update['password'] = cmf_encrypt($res['data']['Data']['DefaultPass']);
 		$update['domain'] = $params["domain"];
+		$update['nextduedate'] = $res['data']['Data']['ExpDate'];
   		$os_info = \think\Db::name("host_config_options")->alias("a")->field("c.option_name")->leftJoin("product_config_options b", "a.configid=b.id")->leftJoin("product_config_options_sub c", "a.optionid=c.id")->where("a.relid", $params["hostid"])->where("b.option_type", 5)->find();
         if (stripos($os_info["option_name"], "win") !== false) {
             $update['username'] = "administrator";
@@ -634,6 +669,13 @@ function rainyunrcs_ChangePackage($params)
 		    $post_data = "\n\n{\n    \"with_ip_num\": " . intval($ip_num - $old_ip_num) . "\n}\n\n";
 		    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
 		}
+		$Disk_num = $params['configoptions']['disksize'];
+		$old_Disk_num = $params['old_configoptions']['disksize'];
+		if($Disk_num > $old_Disk_num){
+		    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/eip/";
+		    $post_data = "\n\n{\n    \"with_ip_num\": " . intval($ip_num - $old_ip_num) . "\n}\n\n";
+		    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
+		}
 	}
 	rainyunrcs_Sync($params);
 	$result['status'] = 'success';
@@ -692,6 +734,374 @@ function rainyunrcs_ssh($params){
     return ["status" => "success", "msg" => "SSH启动成功<script type='text/javascript'>window.open('$url', '_blank');</script>"];
 }
 
+function rainyunrcs_getCloudMonthFee($params){
+	$vserverid = rainyunrcs_GetServerid($params);
+	if (empty($vserverid)) {
+	    return ["status" => "error", "msg" => "产品参数错误"];
+	}
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
+	$disk_ssd_unit_price = $params["configoptions"]["disk_ssd_unit_price"] ?: 0.4;
+	$disk_hdd_unit_price = $params["configoptions"]["disk_hdd_unit_price"] ?: 0.1;
+	$disk_chdd_unit_price = $params["configoptions"]["disk_chdd_unit_price"] ?: 0.2;
+	$disk_bak = $params["configoptions"]["disk_bak"] ?: 0.1;
+foreach ($res["data"]["EDiskList"] as $disk) {  
+    $disk_type = $disk['DiskType'];  
+    $slot = $disk['Slot'];  
+    $backup = $disk['Backup'];  
+    if($slot == 0){
+        $size = $disk['Size'] - 30;
+    }else{
+        $size = $disk['Size'];
+    }
+    if($disk_type == 'ssd'){
+        if($backup == true){
+            $cost = $size * ($disk_ssd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_ssd_unit_price;
+        }
+    }elseif($disk_type == 'hdd'){  
+        if($backup == true){
+            $cost = $size * ($disk_hdd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_hdd_unit_price;
+        } 
+    }elseif($disk_type == 'chdd'){
+        if($backup == true){
+            $cost = $size * ($disk_chdd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_chdd_unit_price;
+        } 
+    }
+    $total_cost += $cost;  
+}
+    return ["status" => "success", "cost"=>$total_cost, "msg" => "获取成功"];
+}
+
+function rainyunrcs_getCloudtzMonthFee($params){
+	$vserverid = rainyunrcs_GetServerid($params);
+	if (empty($vserverid)) {
+	    return ["status" => "error", "msg" => "产品参数错误"];
+	}
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
+	$disk_ssd_unit_price = $params["configoptions"]["disk_ssd_unit_price"] ?: 0.4;
+	$disk_hdd_unit_price = $params["configoptions"]["disk_hdd_unit_price"] ?: 0.1;
+	$disk_chdd_unit_price = $params["configoptions"]["disk_chdd_unit_price"] ?: 0.2;
+	$disk_bak = $params["configoptions"]["disk_bak"] ?: 0.1;
+foreach ($res["data"]["EDiskList"] as $disk) {  
+    $disk_type = $disk['DiskType'];  
+    $slot = $disk['Slot'];  
+    $backup = $disk['Backup'];  
+    if($slot == 0){
+        $size = $disk['Size'] - 30;
+    }else{
+        $size = $disk['Size'];
+    }
+    if($disk_type == 'ssd'){
+        if($backup == true){
+            $cost = $size * ($disk_ssd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_ssd_unit_price;
+        }
+    }elseif($disk_type == 'hdd'){  
+        if($backup == true){
+            $cost = $size * ($disk_hdd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_hdd_unit_price;
+        } 
+    }elseif($disk_type == 'chdd'){
+        if($backup == true){
+            $cost = $size * ($disk_chdd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_chdd_unit_price;
+        } 
+    }
+    $total_cost += $cost;  
+}
+    $post = input('post.');
+    unset($post['func']);  
+    $output = [];  
+    foreach ($post as $key => $value) {  
+        list($id, $attribute) = explode('_', $key, 2);  
+        if (!isset($output[$id])) {  
+            $output[$id] = [];  
+        }  
+        if ($attribute === 'Size') {  
+            $output[$id][$attribute] = (int)$value;  
+        } elseif (strpos($attribute, 'bak') !== false) {  
+            $output[$id][$attribute] = ($value === 'on')? true : false;  
+        }elseif ($attribute === 'status') {
+            $output[$id][$attribute] = $value;
+        }elseif ($attribute === 'type') {
+            $output[$id][$attribute] = $value;
+        }
+    }
+foreach ($output as $key => $value) {  
+    if ($value['status'] === "true") {  
+        //echo "键: " . $key . ", Size: " . $value['Size'] . "\n";  
+        if(strpos($key,'new-') !== false){
+            if($value['type'] == 'ssd'){
+                $unit_price = $disk_ssd_unit_price;
+            }elseif($value['type'] == 'hdd'){
+                $unit_price = $disk_hdd_unit_price;
+            }elseif($value['type'] == 'chdd'){
+                $unit_price = $disk_chdd_unit_price;
+            }
+            if(isset($value['bak']) && $value['bak'] == true){
+                $newcost = $value['Size'] * ($unit_price + $disk_bak);
+            }else{
+                $newcost = $value['Size'] * $unit_price;
+            }
+        }elseif(is_numeric($key)){
+            $keys = array_column($res["data"]["EDiskList"], 'ID');
+            $index = array_search($key, $keys);
+            if($res["data"]["EDiskList"][$index]['DiskType'] == 'ssd'){
+                $unit_price = $disk_ssd_unit_price;
+            }elseif($res["data"]["EDiskList"][$index]['DiskType'] == 'hdd'){
+                $unit_price = $disk_hdd_unit_price;
+            }elseif($res["data"]["EDiskList"][$index]['DiskType'] == 'chdd'){
+                $unit_price = $disk_chdd_unit_price;
+            }
+            if($res["data"]["EDiskList"][$index]['Slot'] == 0){
+                $value['Size'] = $value['Size']-30;
+            }
+            if($res["data"]["EDiskList"][$index]["Backup"] == true){
+                $newcost = $value['Size'] * ($unit_price + $disk_bak);
+            }else{
+                $newcost = $value['Size'] * $unit_price;
+            }
+        }else{
+            return ["status" => "error", "msg" => "出现未知ID,请重试"];
+        }
+    }  
+    $new_total_cost += $newcost;
+}
+$daysLeft = ($params['nextduedate'] - time()) / (60 * 60 * 24);  
+if($daysLeft < 0){
+    $day = 0;
+}else{
+    $day = $daysLeft;
+}
+$zzcost = ($new_total_cost/31)*$day-($total_cost/31)*$day;
+    return ["status" => "success", "cost"=>round($zzcost, 1), "msg" => "获取成功"];
+}
+
+function rainyunrcs_edisk($params){
+	$vserverid = rainyunrcs_GetServerid($params);
+	if (empty($vserverid)) {
+	    return ["status" => "error", "msg" => "产品参数错误"];
+	}
+	if ($params["billingcycle"] == "ontrial"){
+	    return ["status" => "error", "msg" => "试用无法调整硬盘"];
+	}
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
+	$disk_ssd_unit_price = $params["configoptions"]["disk_ssd_unit_price"] ?: 0.4;
+	$disk_hdd_unit_price = $params["configoptions"]["disk_hdd_unit_price"] ?: 0.1;
+	$disk_chdd_unit_price = $params["configoptions"]["disk_chdd_unit_price"] ?: 0.2;
+	$disk_bak = $params["configoptions"]["disk_bak"] ?: 0.1;
+foreach ($res["data"]["EDiskList"] as $disk) {  
+    $disk_type = $disk['DiskType'];  
+    $slot = $disk['Slot'];  
+    $backup = $disk['Backup'];  
+    if($slot == 0){
+        $size = $disk['Size'] - 30;
+    }else{
+        $size = $disk['Size'];
+    }
+    if($disk_type == 'ssd'){
+        if($backup == true){
+            $cost = $size * ($disk_ssd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_ssd_unit_price;
+        }
+    }elseif($disk_type == 'hdd'){  
+        if($backup == true){
+            $cost = $size * ($disk_hdd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_hdd_unit_price;
+        } 
+    }elseif($disk_type == 'chdd'){
+        if($backup == true){
+            $cost = $size * ($disk_chdd_unit_price + $disk_bak);
+        }else{
+            $cost = $size * $disk_chdd_unit_price;
+        } 
+    }
+    $total_cost += $cost;  
+}
+    $post = input('post.');
+    unset($post['func']);  
+    $output = [];  
+    foreach ($post as $key => $value) {  
+        list($id, $attribute) = explode('_', $key, 2);  
+        if (!isset($output[$id])) {  
+            $output[$id] = [];  
+        }  
+        if ($attribute === 'Size') {  
+            $output[$id][$attribute] = (int)$value;  
+        } elseif (strpos($attribute, 'bak') !== false) {  
+            $output[$id][$attribute] = ($value === 'on')? true : false;  
+        }elseif ($attribute === 'status') {
+            $output[$id][$attribute] = $value;
+        }elseif ($attribute === 'type') {
+            $output[$id][$attribute] = $value;
+        }
+    }
+foreach ($output as $key => $value) {  
+    if ($value['status'] === "true") {  
+        if(strpos($key,'new-') !== false){
+            if($value['type'] == 'ssd'){
+                $unit_price = $disk_ssd_unit_price;
+            }elseif($value['type'] == 'hdd'){
+                $unit_price = $disk_hdd_unit_price;
+            }elseif($value['type'] == 'chdd'){
+                $unit_price = $disk_chdd_unit_price;
+            }
+            if(isset($value['bak']) && $value['bak'] == true){
+                $newcost = $value['Size'] * ($unit_price + $disk_bak);
+            }else{
+                $newcost = $value['Size'] * $unit_price;
+            }
+        }elseif(is_numeric($key)){
+            $keys = array_column($res["data"]["EDiskList"], 'ID');
+            $index = array_search($key, $keys);
+            if($res["data"]["EDiskList"][$index]['DiskType'] == 'ssd'){
+                $unit_price = $disk_ssd_unit_price;
+            }elseif($res["data"]["EDiskList"][$index]['DiskType'] == 'hdd'){
+                $unit_price = $disk_hdd_unit_price;
+            }elseif($res["data"]["EDiskList"][$index]['DiskType'] == 'chdd'){
+                $unit_price = $disk_chdd_unit_price;
+            }
+            if($res["data"]["EDiskList"][$index]['Slot'] == 0){
+                $value['Size'] = $value['Size']-30;
+            }
+            if($res["data"]["EDiskList"][$index]["Backup"] == true){
+                $newcost = $value['Size'] * ($unit_price + $disk_bak);
+            }else{
+                $newcost = $value['Size'] * $unit_price;
+            }
+        }else{
+            return ["status" => "error", "msg" => "出现未知ID,请重试"];
+        }
+    }  
+    $new_total_cost += $newcost;
+}
+$daysLeft = ($params['nextduedate'] - time()) / (60 * 60 * 24);  
+if($daysLeft < 0){
+    $day = 0;
+}else{
+    $day = $daysLeft;
+}
+$zzcost = ($new_total_cost/31)*$day-($total_cost/31)*$day;
+$zzcost = round($zzcost, 1);
+$credit = Db::name('clients')  
+            ->where('id', $params['uid'])  
+            ->value('credit');
+if($credit < $zzcost){
+    return ['status'=>'error', 'msg'=>"余额不足，请先充值余额"];
+}
+$ml = [];
+    foreach ($output as $key => $value){
+        if ($value['status'] === "true"){
+            if(strpos($key,'new-') !== false){
+                $ml[] = ["type"=>"create","action"=>["size_in_gb"=>$value['Size'],"disk_type"=>$value['type'],"backup"=>$value['bak'] ?: false ,"tag"=>""]];
+            }elseif(is_numeric($key)){
+                $keys = array_column($res["data"]["EDiskList"], 'ID');
+                $index = array_search($key, $keys);
+                if($value['Size'] != $res["data"]["EDiskList"][$index]["Size"] || $value['bak'] != $res["data"]["EDiskList"][$index]["Backup"]){
+                    $size_in_gb = $value['Size'] - $res["data"]["EDiskList"][$index]["Size"];
+                    $ml[] = ["type"=>"expand","action"=>["edisk_id"=>$key,"size_in_gb"=>$size_in_gb ?: 0,"backup"=>$value['bak'] ?: false]];
+                }
+            }else{
+                return ["status" => "error", "msg" => "出现未知ID,请重试"];
+            }
+        }else{
+            if(is_numeric($key)){
+                $ml[] = ["type"=>"delete","action"=>["edisk_id"=>$key]];
+            }
+        }
+    }
+    if(empty($ml)){
+        return ["status" => "error", "msg" => "调整了个寂寞"];
+    }
+    $wzml = ["actions"=>$ml];
+	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid ."/edisk";
+	$res = rainyunrcs_Curl($url, json_encode($wzml), 10, "POST", $header);
+	if($res["code"] == 200){
+	    Db::table(config('database.prefix') . 'clients')->where('id', $params['uid'])->setDec('credit', $zzcost);
+        if ($params["billingcycle"] == "monthly") {
+            $duration = 1;
+        } elseif ($params["billingcycle"] == "annually") {
+            $duration = 12;
+        } elseif ($params["billingcycle"] == "quarterly") {
+            $duration = 3;
+        } elseif ($params["billingcycle"] == "semiannually") {
+            $duration = 6;
+        }
+        $xxj = ($new_total_cost-$total_cost)*$duration;
+        Db::table(config('database.prefix') . 'host')->where('id', $params['hostid'])->setInc('amount', $xxj);
+	    return ["status" => "success", "msg" => "调整成功"];
+	}else{
+	    return ["status" => "error", "msg" => $res["message"]];
+	}
+}
+
+function rainyunrcs_trafficlimit($params){
+	$vserverid = rainyunrcs_GetServerid($params);
+	if (empty($vserverid)) {
+	    return ["status" => "error", "msg" => "产品参数错误"];
+	}
+    $post = input('post.');
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid ."/traffic/limit";
+	$data = ["day_traffic_in_gb"=>(int)$post["day_traffic_in_gb"],"traffic_limit"=>(int)$post["traffic_limit"]];
+	$res = rainyunrcs_Curl($url, json_encode($data), 10, "POST", $header);
+	if($res["code"] == 200){
+	    return ["status" => "success", "msg" => "成功"];
+	}else{
+	    return ["status" => "error", "msg" => $res["message"]];
+	}
+}
+
+function rainyunrcs_trafficcharge($params){
+	$vserverid = rainyunrcs_GetServerid($params);
+	if (empty($vserverid)) {
+	    return ["status" => "error", "msg" => "产品参数错误"];
+	}
+    $post = input('post.');
+    $traffic300 = $params["configoptions"]["traffic300"] ?: 10;
+    $traffic1024 = $params["configoptions"]["traffic1024"] ?: 20;
+    $traffic_in_gb = (int)$post["traffic_in_gb"];
+    if($traffic_in_gb == 300){
+        $money = $traffic300;
+    }elseif($traffic_in_gb == 1024){
+        $money = $traffic1024;
+    }else{
+        return ["status" => "error", "msg" => "输入参数错误"];
+    }
+    $credit = Db::name('clients')  
+                ->where('id', $params['uid'])  
+                ->value('credit');
+    if($credit < $money){
+        return ['status'=>'error', 'msg'=>"余额不足，请先充值余额"];
+    }
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid ."/traffic/charge";
+	$data = ["traffic_in_gb"=>$traffic_in_gb];
+	$res = rainyunrcs_Curl($url, json_encode($data), 10, "POST", $header);
+	if($res["code"] == 200){
+	    Db::table(config('database.prefix') . 'clients')->where('id', $params['uid'])->setDec('credit', $money);
+	    return ["status" => "success", "msg" => "成功"];
+	}else{
+	    return ["status" => "error", "msg" => $res["message"]];
+	}
+}
+
 function rainyunrcs_FiveMinuteCron() {
 	$serverRows = \think\Db::name('servers')  
 	            ->where('type', 'rainyunrcs')  
@@ -727,6 +1137,10 @@ function rainyunrcs_FiveMinuteCron() {
 			foreach ($res as $product) {
 				if ($product['id'] == $pid) {
 					$availableStock = $product['available_stock'];
+					$cpu = $product['cpu'];
+					$memory = $product['memory'];
+					$net_in = $product['net_in'];
+					$net_out = $product['net_out'];
 					break;
 				}
 			}
@@ -766,7 +1180,7 @@ function rainyunrcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST"
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_HTTPGET, 1);
 	}
-	if (strtoupper($request) == "POST") {
+	if (strtoupper($request) == "POST"  || strtoupper($request) == "PATCH") {
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_POST, 1);
 		if (is_array($data)) {
