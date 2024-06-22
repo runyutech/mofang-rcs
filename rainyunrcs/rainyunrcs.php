@@ -1,7 +1,7 @@
 <?php
 function rainyunrcs_MetaData()
 {
-	return ["DisplayName" => "RainyunRcs", "APIVersion" => "1.1", "HelpDoc" => "https://forum.rainyun.com/t/topic/5552"];
+	return ["DisplayName" => "RainyunRcs", "APIVersion" => "1.2", "HelpDoc" => "https://forum.rainyun.com/t/topic/5552"];
 }
 function rainyunrcs_ConfigOptions()
 {
@@ -222,13 +222,30 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 			]
 		];
 	}elseif($key == "Traffic"){
+	    if($res["data"]["Data"]["TrafficBytesToday"]<1000000){
+	        $TrafficToday = round($res["data"]["Data"]["TrafficBytesToday"]/ 1024, 0)."KB";
+	    }elseif($res["data"]["Data"]["TrafficBytesToday"]<1073741824){
+	        $TrafficToday = round($res["data"]["Data"]["TrafficBytesToday"]/ 1048576, 1)."MB";
+	    }else{
+	        $TrafficToday = round($res["data"]["Data"]["TrafficBytesToday"]/ 1073741824, 1)."GB";
+	    }
+	    if($res["data"]["Data"]["TrafficBytes"]<1000000){
+	        $Traffic = round($res["data"]["Data"]["TrafficBytes"]/ 1024, 0)."KB";
+	    }elseif($res["data"]["Data"]["TrafficBytes"]<1073741824){
+	        $Traffic = round($res["data"]["Data"]["TrafficBytes"]/ 1048576, 1)."MB";
+	    }else{
+	        $Traffic = round($res["data"]["Data"]["TrafficBytes"]/ 1073741824, 1)."GB";
+	    }
 	    return [
 			'template'=>'templates/Traffic.html',
 			'vars'=>[
 			    "list"=>$res["data"],
 			    "billingcycle"=>$params["billingcycle"],
+			    "traffic300"=>$params["configoptions"]["traffic300"] ?: 10,
+			    "traffic1024"=>$params["configoptions"]["traffic1024"] ?: 20,
 			    "time"=>date("Y年m月d日", $res["data"]["Data"]["TrafficResetDate"]),
-			    "TrafficToday"=>round($res["data"]["Data"]["TrafficBytesToday"]/ 1048576, 1),
+			    "Traffic"=>$Traffic,
+			    "TrafficToday"=>$TrafficToday,
 			    "TrafficDayLimit"=>round($res["data"]["Data"]["TrafficBytesDayLimit"]/ 1073741824, 1),
 			    "TrafficOnLimit"=>$res["data"]["Data"]["TrafficOnLimit"]
 			]
@@ -237,7 +254,9 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 }
 function rainyunrcs_AllowFunction()
 {
-	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat", "ssh", "xtermjs" , "getCloudMonthFee" ,"edisk" ,"getCloudtzMonthFee" ,"trafficlimit" ,"trafficcharge"]];
+	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat", "ssh", "xtermjs" , "getCloudMonthFee" ,"edisk" ,"getCloudtzMonthFee" ,"trafficlimit" ,"trafficcharge"]
+	,
+	"admin"=>["xtermjs"]];
 }
 function rainyunrcs_CrackPassword($params, $new_pass)
 {
@@ -427,8 +446,8 @@ function rainyunrcs_CreateAccount($params)
     } else {
         $eip = $params["configoptions"]["with_eip_num"];
     }
-    if($params["configoptions"]["os_id"]==="true"){
-        $try = $params["configoptions"]["os_id"];
+    if($params["configoptions"]["try"]==="true"){
+        $try = $params["configoptions"]["try"];
     }
     if(empty($try)){
         $try = "false";
@@ -669,13 +688,13 @@ function rainyunrcs_ChangePackage($params)
 		    $post_data = "\n\n{\n    \"with_ip_num\": " . intval($ip_num - $old_ip_num) . "\n}\n\n";
 		    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
 		}
-		$Disk_num = $params['configoptions']['disksize'];
-		$old_Disk_num = $params['old_configoptions']['disksize'];
-		if($Disk_num > $old_Disk_num){
-		    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/eip/";
-		    $post_data = "\n\n{\n    \"with_ip_num\": " . intval($ip_num - $old_ip_num) . "\n}\n\n";
-		    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
-		}
+	}
+	$plan_id = $params['configoptions']['plan_id'];
+	$old_plan_id = $params['old_configoptions']['plan_id'];
+	if($plan_id != $old_plan_id){
+	    $url2 = $params["server_host"] . "/product/rcs/" . $vserverid . "/upgrade";
+	    $post_data2 = json_encode(["dest_plan"=>$plan_id,"with_coupon_id"=>0]);
+	    $res = rainyunrcs_Curl($url2, $post_data2, 10, "POST", $header);
 	}
 	rainyunrcs_Sync($params);
 	$result['status'] = 'success';
@@ -1141,6 +1160,8 @@ function rainyunrcs_FiveMinuteCron() {
 					$memory = $product['memory'];
 					$net_in = $product['net_in'];
 					$net_out = $product['net_out'];
+					$gpu_memory_size = $product['gpu_memory_size'];
+					$region = $product['region'];
 					break;
 				}
 			}
