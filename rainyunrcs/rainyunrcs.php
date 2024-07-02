@@ -1,7 +1,7 @@
 <?php
 function rainyunrcs_MetaData()
 {
-	return ["DisplayName" => "RainyunRcs", "APIVersion" => "1.1", "HelpDoc" => "https://forum.rainyun.com/t/topic/5552"];
+	return ["DisplayName" => "RainyunRcs", "APIVersion" => "2.4", "HelpDoc" => "https://forum.rainyun.com/t/topic/5552"];
 }
 function rainyunrcs_ConfigOptions()
 {
@@ -16,8 +16,11 @@ function rainyunrcs_ConfigOptions()
 		["type" => "text", "name" => "disk_hdd_unit_price", "description" => "高速机械单价(每G每月)", "default" => "0.1", "key" => "disk_hdd_unit_price"],
 		["type" => "text", "name" => "disk_chdd_unit_price", "description" => "系统机械单价(每G每月)", "default" => "0.2", "key" => "disk_chdd_unit_price"],
 		["type" => "text", "name" => "disk_bak", "description" => "备份支持(每G每月)", "default" => "0.1", "key" => "disk_bak"],
-		["type" => "text", "name" => "traffic300", "description" => "流量(300GB)", "default" => "10", "key" => "traffic300"],
-		["type" => "text", "name" => "traffic1024", "description" => "流量(1024GB)", "default" => "20", "key" => "traffic1024"]
+		["type" => "text", "name" => "traffic300", "description" => "流量(300GB)", "key" => "traffic300"],
+		["type" => "text", "name" => "traffic1024", "description" => "流量(1024GB)", "key" => "traffic1024"],
+		["type" => "text", "name" => "trafficdiy1", "description" => "流量(自定义1)", "default" => "100|15", "key" => "trafficdiy1"],
+		["type" => "text", "name" => "trafficdiy2", "description" => "流量(自定义2)", "key" => "trafficdiy2"],
+		["type" => "text", "name" => "trafficdiy3", "description" => "流量(自定义3)", "key" => "trafficdiy3"]
 	];
 }
 
@@ -222,13 +225,33 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 			]
 		];
 	}elseif($key == "Traffic"){
+	    if($res["data"]["Data"]["TrafficBytesToday"]<1000000){
+	        $TrafficToday = round($res["data"]["Data"]["TrafficBytesToday"]/ 1024, 0)."KB";
+	    }elseif($res["data"]["Data"]["TrafficBytesToday"]<1073741824){
+	        $TrafficToday = round($res["data"]["Data"]["TrafficBytesToday"]/ 1048576, 1)."MB";
+	    }else{
+	        $TrafficToday = round($res["data"]["Data"]["TrafficBytesToday"]/ 1073741824, 1)."GB";
+	    }
+	    if($res["data"]["Data"]["TrafficBytes"]<1000000){
+	        $Traffic = round($res["data"]["Data"]["TrafficBytes"]/ 1024, 0)."KB";
+	    }elseif($res["data"]["Data"]["TrafficBytes"]<1073741824){
+	        $Traffic = round($res["data"]["Data"]["TrafficBytes"]/ 1048576, 1)."MB";
+	    }else{
+	        $Traffic = round($res["data"]["Data"]["TrafficBytes"]/ 1073741824, 1)."GB";
+	    }
 	    return [
 			'template'=>'templates/Traffic.html',
 			'vars'=>[
 			    "list"=>$res["data"],
 			    "billingcycle"=>$params["billingcycle"],
+			    "traffic300"=>($params["configoptions"]["traffic300"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["300"]) ?: 15,
+			    "traffic1024"=>($params["configoptions"]["traffic1024"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["1024"]) ?: 35,
+			    "traffic".explode("|", $params["configoptions"]["trafficdiy1"])[0]=>explode("|", $params["configoptions"]["trafficdiy1"])[1],
+			    "traffic".explode("|", $params["configoptions"]["trafficdiy2"])[0]=>explode("|", $params["configoptions"]["trafficdiy2"])[1],
+			    "traffic".explode("|", $params["configoptions"]["trafficdiy3"])[0]=>explode("|", $params["configoptions"]["trafficdiy3"])[1],
 			    "time"=>date("Y年m月d日", $res["data"]["Data"]["TrafficResetDate"]),
-			    "TrafficToday"=>round($res["data"]["Data"]["TrafficBytesToday"]/ 1048576, 1),
+			    "Traffic"=>$Traffic,
+			    "TrafficToday"=>$TrafficToday,
 			    "TrafficDayLimit"=>round($res["data"]["Data"]["TrafficBytesDayLimit"]/ 1073741824, 1),
 			    "TrafficOnLimit"=>$res["data"]["Data"]["TrafficOnLimit"]
 			]
@@ -237,7 +260,9 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 }
 function rainyunrcs_AllowFunction()
 {
-	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat", "ssh", "xtermjs" , "getCloudMonthFee" ,"edisk" ,"getCloudtzMonthFee" ,"trafficlimit" ,"trafficcharge"]];
+	return ["client" => ["CreateSnap", "DeleteSnap", "RestoreSnap", "CreateBackup", "DeleteBackup", "RestoreBackup", "CreateSecurityGroup", "DeleteSecurityGroup", "ApplySecurityGroup", "ShowSecurityGroupAcl", "CreateSecurityGroupAcl", "DeleteSecurityGroupAcl", "MountCdRom", "UnmountCdRom", "addNatAcl", "delNatAcl", "addNatWeb", "delNatWeb", "addNat", "delNat", "ssh", "xtermjs" , "getCloudMonthFee" ,"edisk" ,"getCloudtzMonthFee" ,"trafficlimit" ,"trafficcharge"]
+	,
+	"admin"=>["xtermjs"]];
 }
 function rainyunrcs_CrackPassword($params, $new_pass)
 {
@@ -427,8 +452,8 @@ function rainyunrcs_CreateAccount($params)
     } else {
         $eip = $params["configoptions"]["with_eip_num"];
     }
-    if($params["configoptions"]["os_id"]==="true"){
-        $try = $params["configoptions"]["os_id"];
+    if($params["configoptions"]["try"]==="true"){
+        $try = $params["configoptions"]["try"];
     }
     if(empty($try)){
         $try = "false";
@@ -657,25 +682,28 @@ function rainyunrcs_Reboot($params)
 function rainyunrcs_ChangePackage($params)
 {
 	$vserverid = rainyunrcs_GetServerid($params);
-	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	if (empty($vserverid)) {
-		return "产品参数错误";
+	if(empty($vserverid)){
+        $vserverid = intval($params['old_configoptions']['customfields']['vserverid']);
+        if (empty($vserverid)){
+            return '产品参数错误';
+        }
 	}
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	if(isset($params['configoptions_upgrade']['with_eip_num'])){
 		$ip_num = $params['configoptions']['with_eip_num'];
 		$old_ip_num = $params['old_configoptions']['with_eip_num'];
 		if($ip_num > $old_ip_num){
 		    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/eip/";
-		    $post_data = "\n\n{\n    \"with_ip_num\": " . intval($ip_num - $old_ip_num) . "\n}\n\n";
+		    $post_data = json_encode(["with_ip_num"=>intval($ip_num - $old_ip_num)]);
 		    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
 		}
-		$Disk_num = $params['configoptions']['disksize'];
-		$old_Disk_num = $params['old_configoptions']['disksize'];
-		if($Disk_num > $old_Disk_num){
-		    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/eip/";
-		    $post_data = "\n\n{\n    \"with_ip_num\": " . intval($ip_num - $old_ip_num) . "\n}\n\n";
-		    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
-		}
+	}
+	$plan_id = $params['configoptions']['plan_id'];
+	$old_plan_id = $params['old_configoptions']['plan_id'];
+	if($plan_id != $old_plan_id){
+	    $url2 = $params["server_host"] . "/product/rcs/" . $vserverid . "/upgrade";
+	    $post_data2 = json_encode(["dest_plan"=>intval($plan_id),"with_coupon_id"=>0]);
+	    $res = rainyunrcs_Curl($url2, $post_data2, 10, "POST", $header);
 	}
 	rainyunrcs_Sync($params);
 	$result['status'] = 'success';
@@ -1073,16 +1101,28 @@ function rainyunrcs_trafficcharge($params){
 	if (empty($vserverid)) {
 	    return ["status" => "error", "msg" => "产品参数错误"];
 	}
+	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
+	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
     $post = input('post.');
-    $traffic300 = $params["configoptions"]["traffic300"] ?: 10;
-    $traffic1024 = $params["configoptions"]["traffic1024"] ?: 20;
+    $traffic300 = ($params["configoptions"]["traffic300"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["300"]) ?: 15;
+    $traffic1024 = ($params["configoptions"]["traffic1024"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["1024"]) ?: 35;
+    ${"traffic".explode("|", $params["configoptions"]["trafficdiy1"])[0]}=explode("|", $params["configoptions"]["trafficdiy1"])[1];
+    ${"traffic".explode("|", $params["configoptions"]["trafficdiy2"])[0]}=explode("|", $params["configoptions"]["trafficdiy2"])[1];
+    ${"traffic".explode("|", $params["configoptions"]["trafficdiy3"])[0]}=explode("|", $params["configoptions"]["trafficdiy3"])[1];
     $traffic_in_gb = (int)$post["traffic_in_gb"];
     if($traffic_in_gb == 300){
         $money = $traffic300;
     }elseif($traffic_in_gb == 1024){
         $money = $traffic1024;
     }else{
-        return ["status" => "error", "msg" => "输入参数错误"];
+        if(isset(${"traffic".$traffic_in_gb})){
+            $money = ${"traffic".$traffic_in_gb};
+        }elseif(array_key_exists($traffic_in_gb,$res["data"]["Data"]["Plan"]["traffic_price"])){
+            $money = $res["data"]["Data"]["Plan"]["traffic_price"]["$traffic_in_gb"];
+        }else{
+            return ["status" => "error", "msg" => "输入参数错误"];
+        }
     }
     $credit = Db::name('clients')  
                 ->where('id', $params['uid'])  
@@ -1090,7 +1130,6 @@ function rainyunrcs_trafficcharge($params){
     if($credit < $money){
         return ['status'=>'error', 'msg'=>"余额不足，请先充值余额"];
     }
-	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid ."/traffic/charge";
 	$data = ["traffic_in_gb"=>$traffic_in_gb];
 	$res = rainyunrcs_Curl($url, json_encode($data), 10, "POST", $header);
@@ -1141,6 +1180,8 @@ function rainyunrcs_FiveMinuteCron() {
 					$memory = $product['memory'];
 					$net_in = $product['net_in'];
 					$net_out = $product['net_out'];
+					$gpu_memory_size = $product['gpu_memory_size'];
+					$region = $product['region'];
 					break;
 				}
 			}
