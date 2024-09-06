@@ -15,7 +15,7 @@ function rainyunrcs_ConfigOptions()
 		["type" => "text", "name" => "disk_hdd_unit_price", "description" => "高速机械单价(每G每月)", "default" => "0.1", "key" => "disk_hdd_unit_price"],
 		["type" => "text", "name" => "disk_chdd_unit_price", "description" => "系统机械单价(每G每月)", "default" => "0.2", "key" => "disk_chdd_unit_price"],
 		["type" => "text", "name" => "disk_bak", "description" => "备份支持单价(每G每月)", "default" => "0.1", "key" => "disk_bak"],
-		["type" => "text", "name" => "trafficdiy1", "description" => "流量单价1(格式:GB|元)", "default" => "100|15", "key" => "trafficdiy1"],
+		["type" => "text", "name" => "trafficdiy1", "description" => "流量单价1(格式:GB|元)(如100|15)", "default" => "100|15", "key" => "trafficdiy1"],
 		["type" => "text", "name" => "trafficdiy2", "description" => "流量单价2", "key" => "trafficdiy2"],
 		["type" => "text", "name" => "trafficdiy3", "description" => "流量单价3", "key" => "trafficdiy3"]
 		// ["type" => "text", "name" => "traffic300", "description" => "流量单价(300GB)", "key" => "traffic300"],
@@ -251,6 +251,7 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 			    "time"=>date("Y年m月d日", $res["data"]["Data"]["TrafficResetDate"]),
 			    "Traffic"=>$Traffic,
 			    "TrafficToday"=>$TrafficToday,
+			    "TrafficPerMonth"=>$res["data"]["Data"]["Plan"]["TrafficBaseGB"],
 			    "TrafficDayLimit"=>round($res["data"]["Data"]["TrafficBytesDayLimit"]/ 1073741824, 1),
 			    "TrafficOnLimit"=>$res["data"]["Data"]["TrafficOnLimit"]
 			]
