@@ -6,19 +6,20 @@ function rainyunrcs_MetaData()
 function rainyunrcs_ConfigOptions()
 {
 	return [
-		["type" => "text", "name" => "plan_id", "description" => "套餐ID(必填)", "key" => "plan_id"], 
-		["type" => "text", "name" => "try", "description" => "是否试用(选填)", "default" => "false", "key" => "try"],
+		["type" => "text", "name" => "plan_id", "description" => "*套餐ID(必填)", "key" => "plan_id"], 
+		["type" => "text", "name" => "os_id", "description" => "*系统镜像ID(必填)", "key" => "os_id"], 
+		["type" => "text", "name" => "try", "description" => "是否试用(true/false)", "default" => "false", "key" => "try"],
+		["type" => "text", "name" => "with_eip_num", "description" => "独立ip数(选填)", "default" => "0", "key" => "with_eip_num"],
 		["type" => "text", "name" => "with_coupon_id", "description" => "优惠券id(选填)", "default" => "0", "key" => "with_coupon_id"], 
-		["type" => "text", "name" => "with_eip_num", "description" => "附加独立ip(选填)", "default" => "0", "key" => "with_eip_num"],
 		["type" => "text", "name" => "disk_ssd_unit_price", "description" => "高速固态单价(每G每月)", "default" => "0.4", "key" => "disk_ssd_unit_price"],
 		["type" => "text", "name" => "disk_hdd_unit_price", "description" => "高速机械单价(每G每月)", "default" => "0.1", "key" => "disk_hdd_unit_price"],
 		["type" => "text", "name" => "disk_chdd_unit_price", "description" => "系统机械单价(每G每月)", "default" => "0.2", "key" => "disk_chdd_unit_price"],
-		["type" => "text", "name" => "disk_bak", "description" => "备份支持(每G每月)", "default" => "0.1", "key" => "disk_bak"],
-		["type" => "text", "name" => "traffic300", "description" => "流量(300GB)", "key" => "traffic300"],
-		["type" => "text", "name" => "traffic1024", "description" => "流量(1024GB)", "key" => "traffic1024"],
-		["type" => "text", "name" => "trafficdiy1", "description" => "流量(自定义1)", "default" => "100|15", "key" => "trafficdiy1"],
-		["type" => "text", "name" => "trafficdiy2", "description" => "流量(自定义2)", "key" => "trafficdiy2"],
-		["type" => "text", "name" => "trafficdiy3", "description" => "流量(自定义3)", "key" => "trafficdiy3"]
+		["type" => "text", "name" => "disk_bak", "description" => "备份支持单价(每G每月)", "default" => "0.1", "key" => "disk_bak"],
+		["type" => "text", "name" => "trafficdiy1", "description" => "流量单价1(格式:GB|元)", "default" => "100|15", "key" => "trafficdiy1"],
+		["type" => "text", "name" => "trafficdiy2", "description" => "流量单价2", "key" => "trafficdiy2"],
+		["type" => "text", "name" => "trafficdiy3", "description" => "流量单价3", "key" => "trafficdiy3"]
+		// ["type" => "text", "name" => "traffic300", "description" => "流量单价(300GB)", "key" => "traffic300"],
+		// ["type" => "text", "name" => "traffic1024", "description" => "流量单价(1024GB)", "key" => "traffic1024"],
 	];
 }
 
@@ -242,8 +243,8 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 			'vars'=>[
 			    "list"=>$res["data"],
 			    "billingcycle"=>$params["billingcycle"],
-			    "traffic300"=>($params["configoptions"]["traffic300"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["300"]) ?: 15,
-			    "traffic1024"=>($params["configoptions"]["traffic1024"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["1024"]) ?: 35,
+			    // "traffic300"=>($params["configoptions"]["traffic300"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["300"]) ?: 15,
+			    // "traffic1024"=>($params["configoptions"]["traffic1024"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["1024"]) ?: 35,
 			    "traffic".explode("|", $params["configoptions"]["trafficdiy1"])[0]=>explode("|", $params["configoptions"]["trafficdiy1"])[1],
 			    "traffic".explode("|", $params["configoptions"]["trafficdiy2"])[0]=>explode("|", $params["configoptions"]["trafficdiy2"])[1],
 			    "traffic".explode("|", $params["configoptions"]["trafficdiy3"])[0]=>explode("|", $params["configoptions"]["trafficdiy3"])[1],
@@ -1103,25 +1104,25 @@ function rainyunrcs_trafficcharge($params){
 	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
 	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
     $post = input('post.');
-    $traffic300 = ($params["configoptions"]["traffic300"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["300"]) ?: 15;
-    $traffic1024 = ($params["configoptions"]["traffic1024"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["1024"]) ?: 35;
+    // $traffic300 = ($params["configoptions"]["traffic300"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["300"]) ?: 15;
+    // $traffic1024 = ($params["configoptions"]["traffic1024"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["1024"]) ?: 35;
     ${"traffic".explode("|", $params["configoptions"]["trafficdiy1"])[0]}=explode("|", $params["configoptions"]["trafficdiy1"])[1];
     ${"traffic".explode("|", $params["configoptions"]["trafficdiy2"])[0]}=explode("|", $params["configoptions"]["trafficdiy2"])[1];
     ${"traffic".explode("|", $params["configoptions"]["trafficdiy3"])[0]}=explode("|", $params["configoptions"]["trafficdiy3"])[1];
     $traffic_in_gb = (int)$post["traffic_in_gb"];
-    if($traffic_in_gb == 300){
-        $money = $traffic300;
-    }elseif($traffic_in_gb == 1024){
-        $money = $traffic1024;
-    }else{
-        if(isset(${"traffic".$traffic_in_gb})){
-            $money = ${"traffic".$traffic_in_gb};
-        }elseif(array_key_exists($traffic_in_gb,$res["data"]["Data"]["Plan"]["traffic_price"])){
-            $money = $res["data"]["Data"]["Plan"]["traffic_price"]["$traffic_in_gb"];
-        }else{
-            return ["status" => "error", "msg" => "输入参数错误"];
-        }
-    }
+    // if($traffic_in_gb == 300){
+    //     $money = $traffic300;
+    // }elseif($traffic_in_gb == 1024){
+    //     $money = $traffic1024;
+    // }else{
+	if(isset(${"traffic".$traffic_in_gb})){
+		$money = ${"traffic".$traffic_in_gb};
+	}elseif(array_key_exists($traffic_in_gb,$res["data"]["Data"]["Plan"]["traffic_price"])){
+		$money = $res["data"]["Data"]["Plan"]["traffic_price"]["$traffic_in_gb"];
+	}else{
+		return ["status" => "error", "msg" => "输入参数错误"];
+	}
+    // }
     $credit = Db::name('clients')  
                 ->where('id', $params['uid'])  
                 ->value('credit');
