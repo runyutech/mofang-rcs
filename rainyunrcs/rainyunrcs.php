@@ -6,12 +6,12 @@ function rainyunrcs_MetaData()
 function rainyunrcs_ConfigOptions()
 {
 	return [
-		["type" => "text", "name" => "type", "description" => "开通类型(必填)", "default" => "rcs", "key" => "type"], 
-		["type" => "text", "name" => "os_id", "description" => "*系统镜像ID(必填)", "key" => "os_id"], 
 		["type" => "text", "name" => "plan_id", "description" => "套餐ID(必填)", "key" => "plan_id"], 
-		["type" => "text", "name" => "try", "description" => "是否试用(选填)", "default" => "false", "key" => "try"],
-		["type" => "text", "name" => "with_coupon_id", "description" => "优惠券id(选填)", "default" => "0", "key" => "with_coupon_id"], 
-		["type" => "text", "name" => "with_eip_num", "description" => "附加独立ip(选填)", "default" => "0", "key" => "with_eip_num"]
+		["type" => "text", "name" => "os_id", "description" => "*系统镜像ID(必填)", "key" => "os_id"], 
+		["type" => "text", "name" => "with_eip_num", "description" => "附加独立ip数量(选填)", "default" => "0", "key" => "with_eip_num"]
+		["type" => "yesno", "name" => "try", "description" => "是否试用", "default" => false, "key" => "try"],
+		// ["type" => "text", "name" => "type", "description" => "开通类型(必填)", "default" => "rcs", "key" => "type"], 
+		// ["type" => "text", "name" => "with_coupon_id", "description" => "优惠券id(选填)", "default" => "0", "key" => "with_coupon_id"], 
 	];
 }
 
@@ -387,7 +387,11 @@ function rainyunrcs_CreateAccount($params)
     } else {
         $eip = $params["configoptions"]["with_eip_num"];
     }
-    $post_data = "\n{\n    \"duration\": " . $duration . ",\n    \"plan_id\": " . $params["configoptions"]["plan_id"] . ",\n    \"os_id\": " . $params["configoptions"]["os_id"] . ",\n    \"with_eip_flags\": \"\",\n    \"with_eip_num\": " . $eip . "\n}\n";
+    $post_data = "\n{\n    \"duration\": " . $duration
+	. ",\n    \"plan_id\": " . $params["configoptions"]["plan_id"]
+	. ",\n    \"os_id\": " . $params["configoptions"]["os_id"]
+	. ",\n    \"with_eip_flags\": \"\",\n "
+	. "   \"with_eip_num\": " . $eip . "\n}\n";
     $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
         $server_id = $res["data"]["ID"];
