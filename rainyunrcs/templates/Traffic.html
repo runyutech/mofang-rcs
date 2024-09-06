@@ -1,0 +1,75 @@
+<div>
+    <div class="card mb-1">
+        <div class="card-body">
+            <h4 class="text-primary mb-2">流量/带宽</h4>
+            <div class="mb-50">
+                <ul class="pl-2 text-secondary">
+                    <li>剩余流量：{$Traffic}</li>
+                    <li>今日已用：{$TrafficToday} </li>
+                    <li>{if $billingcycle == "ontrial"}当前为试用期间，默认50G流量，续费后自动补充，{/if}</li>
+                    <li>流量为产品公网上传下载共用流量，剩余流量支持叠加到次月， 每月自动补充1024GB，流量不足将限制到5M，如需避免流量使用过多，可以限制流量</li>
+                    <li>下次补充时间 {$time}</li>
+                </ul>
+            </div>
+            <hr>
+            <h4 class="card-title text-secondary mb-1 bx bx-slider-alt"> 限制流量 </h4>
+            <div id="xzll">
+                <form>
+                    <label for="day_traffic_in_gb">日流量阈值(G)</label>
+                    <input type="text" class="form-control" id="day_traffic_in_gb" name="day_traffic_in_gb" placeholder="请输入流量阈值" value="{$TrafficDayLimit}">
+                    <label for="day_traffic_in_gb">阈值填0则不限制</label>
+                    <br>
+                    <label for="traffic_limit">限制带宽(M)</label>
+                    <input type="text" class="form-control" id="traffic_limit" name="traffic_limit" placeholder="请输入带宽" value="{$TrafficOnLimit}">
+                    <label for="traffic_limit">日流量达到阈值将触发限流</label>
+                </form>
+                <button type="button" class="btn btn-primary mt-1" id="xzllok"> 确定 </button>
+            </div>
+            <hr>
+            <div id="pay">
+                <select class="form-select form-select-lg" id="traffic_in_gb">
+                    {foreach $list.Data.Plan.traffic_price as $key=>$vo }
+                    {if $key == "300"}<option value="300">{$traffic300}元——300G流量</option>
+                    {elseif $key == "1024"}<option value="1024">{$traffic1024}元——1024G流量</option>
+                    {else}<option value="{$key}">{php}echo ${traffic.$key} ?: $vo ;{/php}元——{$key}G流量</option>
+                    {/if}
+                    {/foreach}
+                </select>
+                <label for="traffic_in_gb">即充即用,支持留存到次月</label>
+                <button type="button" class="btn btn-primary mt-1" id="payok"> 立即购买 </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function(){
+        $('#xzllok').click(function(){
+                $.ajax({
+                    type:"post",
+                    url:"{$MODULE_CUSTOM_API}",
+                    data:$("#xzll").find("form").serialize() + "&func=trafficlimit",
+                    success:function(data){
+                        if(data.status==200){
+                            Swal.fire("成功", data.msg, "success").then((isConfirm) => window.location.reload());
+                        }else{
+                            Swal.fire("失败", data.msg, "error");
+                        }
+                    }
+                })
+        }); 
+        $('#payok').click(function(){
+                $.ajax({
+                    type:"post",
+                    url:"{$MODULE_CUSTOM_API}",
+                    data:{"func":"trafficcharge","traffic_in_gb":$('#traffic_in_gb').find('option:selected').val()},
+                    success:function(data){
+                        if(data.status==200){
+                            Swal.fire("成功", data.msg, "success").then((isConfirm) => window.location.reload());
+                        }else{
+                            Swal.fire("失败", data.msg, "error");
+                        }
+                    }
+                })
+        }); 
+    });
+</script>

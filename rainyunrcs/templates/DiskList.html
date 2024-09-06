@@ -1,0 +1,298 @@
+<style>
+    .rounded-table {
+      border-collapse: collapse;
+    }
+    
+    .rounded-table th,
+    .rounded-table td {
+      padding: 10px;
+      border: 1px solid;
+      border-radius: 10px;
+    }
+    
+     input[type='checkbox'].switch{
+        outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        position: relative;
+        width: 40px;
+        height: 20px;
+        background: #ccc;
+        border-radius: 10px;
+        transition: border-color .3s, background-color .3s;
+    }
+    
+    input[type='checkbox'].switch::after {
+        content: '';
+        display: inline-block;
+        width: 1rem;
+        height:1rem;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0, 0, 2px, #999;
+        transition:.4s;
+        top: 2px;
+        position: absolute;
+        left: 2px;
+    }
+    
+    input[type='checkbox'].switch:checked {
+        background: #0000FF;
+    }
+    input[type='checkbox'].switch:checked::after {
+        content: '';
+        position: absolute;
+        left: 55%;
+        top: 2px;
+    }
+</style>
+<div>
+    <div class="card mb-1">
+        <div class="card-body">
+            <h4 class="text-primary mb-2">弹性云盘</h4>
+            <div class="mb-50">
+                <ul class="pl-2 text-secondary">
+                    <li>弹性云盘按 <span><span>{foreach $list.Data.Plan.disk_price as $key=>$vo } {if $key == "ssd"}高速固态:{$disk_ssd_unit_price}元/G/月{elseif $key == "hdd"}高速机械:{$disk_hdd_unit_price}元/G/月{elseif $key == "chdd"}系统机械:{$disk_chdd_unit_price}元/G/月{/if}, {/foreach}</span></span><span>
+                        </span><span>
+                        </span> 开启备份支持{$disk_bak}元/G/月计入产品月租价 </li>
+                    <li><span><span>{foreach $list.Data.Plan.disk_price as $key=>$vo } {if $key == "ssd"}高速固态总量最多250G{elseif $key == "hdd"}高速机械总量最多2000G{elseif $key == "chdd"}系统机械总量最多250G{/if}, {/foreach}</span></span><span>
+                        </span><span>
+                        </span></li>
+                    <li><b>硬盘扩容或新增后，如系统内未自动同步，可以参考<a href="https://www.mhjz1.cn/talkhub/view/6d84141e-1781-42f5-be7e-9ef7923e2225" rel="noopener" target="_blank" class="">手动扩容教程</a>进行手动扩容。</b></li>
+                    <li>重装系统时除系统盘外，其他云盘数据依然保留</li>
+                    <li>每个产品支持4个云盘，容量无法缩小，删除硬盘不返回费用，如需则建议临近续费时操作删除</li>
+                    <li>系统盘固定支持备份，备份还原时，对应槽位的云盘数据将被覆盖，容量不变</li>
+                </ul>
+            </div>
+            <hr>
+            <h4 class="card-title text-secondary mb-1 bx bx-hdd"> 弹性云盘列表 </h4>
+            <div class="d-flex align-items-center mb-1"><button type="button" class="btn btn-primary" id="adjusting" data-status="no"><i class="bx bx-plus-medical"></i> 调整云盘 </button>
+                <div class="ml-1"><span class="h4 pl-1 border-left-primary border-left-3 text-secondary"> <span id="moneyt">当前月租：</span><span id="money"> ¥</span></span></div>
+            </div>
+            <div>
+                <div class="table_mode">
+                    <form>
+                        <table class="bordered rounded-table" border="1" cellspacing="0" style="width: 100%;" id="diskt">
+                            <colgroup>
+                                <col id="col-0">
+                                <col id="col-1">
+                                <col id="col-2">
+                                <col id="col-3">
+                                <col id="col-4">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th scope="col" aria-sort="descending" aria-controls="col-0"><span class="text-nowrap"> 槽位 </span></th>
+                                    <th scope="col" aria-sort="descending" aria-controls="col-1"><span class="text-nowrap"> 容量 </span></th>
+                                    <th scope="col" aria-sort="descending" aria-controls="col-2"><span class="text-nowrap"> 类型 </span></th>
+                                    </th>
+                                    <th scope="col" aria-sort="descending" aria-controls="col-2"><span class="text-nowrap"> 备份支持 </span></th>
+                                    </th>
+                                    <th class="delt" scope="col" aria-sort="descending" aria-controls="col-2" style="display:none"><span class="text-nowrap"> 操作 </span></th>
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {foreach $list.EDiskList as $key=>$vo }
+                                <tr>
+                                    <input type="hidden" class="dstatus" name="{$vo.ID}_status" value="true">
+                                    <td class="vgt-left-align"><span class="text-nowrap"> {$vo.Slot} </span></td>
+                                    <td class="vgt-left-align"><span class="text-nowrap SizeVo" data-id="{$vo.ID}" data-size="{$vo.Size}" data-max="{if $vo.DiskType == 'ssd'}250{elseif $vo.DiskType == 'hdd'}2000{elseif $vo.DiskType == 'chdd'}250{/if}"> {$vo.Size} GB </span></td>
+                                    <td class="vgt-left-align"><span class="text-nowrap"><span> {if $vo.Slot == 0}系统盘{else/}数据盘{/if} / {if $vo.DiskType == "ssd"}高速固态{elseif $vo.DiskType == "hdd"}高速机械{elseif $vo.DiskType == "chdd"}系统机械{/if} </span></span></td>
+                                    <td class="vgt-left-align"><span class="text-nowrap"><span> {if $vo.Backup == true}<div class="btn btn-primary btn-sm iszcbak">是</div>{if $vo.Slot != 0}<input type="checkbox" name="{$vo.ID}_bak" class="switch" style="display:none" checked>{else/}<input type="hidden" name="{$vo.ID}_bak" value="on">{/if}{else/}<div class="btn btn-danger btn-sm iszcbak">否</div><input type="checkbox" name="{$vo.ID}_bak" class="switch" style="display:none">{/if} </span></span></td>
+                                    <td class="delt" class="vgt-left-align" style="display:none">{if $vo.Slot != 0}<div class="btn btn-danger btn-sm iszcbak delt delb">删除</div>{/if} </td>
+                                </tr>
+                                {/foreach}
+                            </tbody>
+
+                        </table>
+                    </form>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary mt-1" style="display:none" id="adddisk"><i class="bx bx-plus-medical"></i> 添加硬盘 </button>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function() {  
+        getCloudMonthFee();
+        var news =0;
+        $('#adjusting').click(function() {  
+            var currentStatus = $(this).data('status');  
+            if (currentStatus === 'no') {  
+                $(this).data('status', 'yes').text('确定调整');  
+                $("#moneyt").text('调整费用');
+                $(".SizeVo").each(function() {
+                    var size = $(this).data("size");
+                    var max = $(this).data("max");
+                    var id = $(this).data("id");
+                    $(this).after('<input type="range" class="DSize" name="'+id+'_Size" min="' + size + '" max="'+max+'" step="5" value="' + size + '">');  
+                });
+                sx();
+                debouncedGetCloudtzMonthFee();
+                $(".iszcbak").hide();
+                $(".switch").show();
+                $(".delt").show();
+                $("#adddisk").show();
+                $('#adddisk').click(function() {  
+                    news = news+1;
+                    var $tbody = $('#diskt tbody');  
+                    var newRow = '<tr data-isnew="true"><input type="hidden"class="dstatus"name="new-'+news+'_status"value="true">'+
+                    '<td class="vgt-left-align">'+
+                    '<span class="text-nowrap"></span>'+
+                    '</td>'+
+                    '<td class="vgt-left-align">'+
+                    '<span class="text-nowrap SizeVo" data-id="new-'+news+'" data-size="10" data-max="250">10 GB</span>'+
+                    '<input type="range"class="DSize" name="new-'+news+'_Size"min="10" max="250" step="5" value="10">'+
+                    '</td>'+
+                    '<td class="vgt-left-align">'+
+                    '<span class="text-nowrap">'+
+                    '<span>数据盘/<select class="form-select-sm" name="new-'+news+'_type">{foreach $list.Data.Plan.disk_price as $key=>$vo } {if $key == "ssd"}<option value="ssd">高速固态</option>{elseif $key == "hdd"}<option value="hdd">高速机械</option>{elseif $key == "chdd"}<option value="chdd">系统机械</option>{/if} {/foreach}</select></span>'+
+                    '</span>'+
+                    '</td>'+
+                    '<td class="vgt-left-align">'+
+                    '<span class="text-nowrap">'+
+                    '<span>'+
+                    '<input type="checkbox" name="new-'+news+'_bak" class="switch" style="" checked>'+
+                    '</span>'+
+                    '</span>'+
+                    '</td>'+
+                    '<td class="delt"style="">'+
+                    '<div class="btn btn-danger btn-sm iszcbak delt delb"style="">删除</div>'+
+                    '</td>'+
+                    '</tr>';  
+                    $tbody.append(newRow);  
+                    sx();
+                    $('select[name^="new-"]').change(function() {  
+                        var $row = $(this).closest('tr');  
+                        var selectedValue = $(this).val();  
+                        var $dSizeInput = $row.find('input[type="range"].DSize');  
+                        if (selectedValue === 'ssd') {  
+                            $dSizeInput.attr('max', '250');  
+                        } else if (selectedValue === 'hdd') {  
+                            $dSizeInput.attr('max', '2000');  
+                        } else if (selectedValue === 'chdd') {  
+                            $dSizeInput.attr('max', '250');  
+                        }  
+                        $dSizeInput.change();  
+                    });
+                }); 
+                $('.table_mode').on('click', '.delb', function(e) {  
+                    e.preventDefault(); // 阻止默认行为（如果有的话）  
+                    var $tr = $(this).closest('tr'); // 获取当前行的 jQuery 对象  
+                  Swal.fire({
+                    type: 'warning', // 弹框类型
+                    title: '', //标题
+                    text: "确定删除吗？", //显示内容
+                    confirmButtonColor: '#3085d6', // 确定按钮的 颜色
+                    confirmButtonText: '确定', // 确定按钮的 文字
+                    showCancelButton: true, // 是否显示取消按钮
+                    cancelButtonColor: '#d33', // 取消按钮的 颜色
+                    cancelButtonText: "取消", // 取消按钮的 文字
+                    focusCancel: true, // 是否聚焦 取消按钮
+                    reverseButtons: true // 是否 反转 两个按钮的位置 默认是 左边 确定 右边 取消
+                  }).then((isConfirm) => {
+                    try {
+                      //判断 是否 点击的 确定按钮
+                      if (isConfirm.value) {
+                        $tr.find('input.dstatus').val('false');
+                        if($tr.data("isnew") == true){
+                            $tr.remove();
+                        }else{
+                            $tr.hide();
+                        }
+                      } else {
+                      }
+                    } catch (e) {
+                      alert(e);
+                    }
+                  });
+                }); 
+                var cancelButton = $('<button type="button" class="btn btn-secondary" id="cancel-adjusting">取消</button>');  
+                $(this).after(cancelButton);  
+                cancelButton.click(function() {  
+                    $('#adjusting').data('status', 'no').html('<i class="bx bx-plus-medical"></i>调整云盘'); 
+                    $("#moneyt").text('当前月租');
+                    $(this).remove();  
+                    $(".DSize").remove();
+                    $(".switch").hide();
+                    $(".iszcbak").show();
+                    $(".delt").hide();
+                    $('#diskt').find('tr').find('input.dstatus').val('true');
+                    $('#diskt').find('tr').show();
+                    $("#adddisk").hide();
+                    $("#diskt").find("tr[data-isnew='true']").remove();
+                    $(".SizeVo").each(function() {
+                        var size = $(this).data("size");
+                        $(this).text(size+' GB');  
+                    });
+                });  
+            }else{
+                $.ajax({
+                    type:"post",
+                    url:"{$MODULE_CUSTOM_API}",
+                    data:$(".table_mode").find("form").serialize() + "&func=edisk",
+                    success:function(data){
+                    if(data.status==200){
+                        Swal.fire("成功", data.msg, "success").then((isConfirm) => window.location.reload());
+                    }else{
+                        Swal.fire("失败", data.msg, "error");
+                    }
+                    }
+                })
+            }
+        });  
+    });
+    function getCloudMonthFee(){
+                $.ajax({
+                    type:"post",
+                    url:"{$MODULE_CUSTOM_API}",
+                    data:{"func":"getCloudMonthFee"},
+                    success:function(data){
+                            $('#money').text(formatNumber(data.cost)+" ¥");
+                    }
+                })
+    }
+    function getCloudtzMonthFee(){
+                $.ajax({
+                    type:"post",
+                    url:"{$MODULE_CUSTOM_API}",
+                    data:$(".table_mode").find("form").serialize() + "&func=getCloudtzMonthFee",
+                    success:function(data){
+                            $('#money').text(formatNumber(data.cost)+" ¥");
+                    }
+                })
+    }
+    function formatNumber(num) {  
+      let rounded = +num.toFixed(2); 
+      if (Math.abs(rounded - Math.floor(rounded)) < Number.EPSILON) {  
+        return rounded.toString();  
+      } else {  
+        return rounded.toFixed(2);  
+      }  
+    } 
+    function debounce(func, wait) {  
+        let timeout;  
+        return function() {  
+            clearTimeout(timeout);  
+            timeout = setTimeout(() => func.apply(this, arguments), wait);  
+        };  
+    }
+    var debouncedGetCloudtzMonthFee = debounce(getCloudtzMonthFee, 500);
+    function sx(){
+                var inputs = document.querySelectorAll('.DSize');  
+                inputs.forEach(function(input) {  
+                    var span = input.previousElementSibling; 
+                    input.addEventListener('input', function() {  
+                        var currentValue = this.value + ' GB';  
+                        span.textContent = currentValue;  
+                    });  
+                });
+    $('.table_mode').on('change input', 'form input, form select', function() {  
+        debouncedGetCloudtzMonthFee();
+        
+    });
+    }
+</script>
