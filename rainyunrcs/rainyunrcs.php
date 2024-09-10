@@ -8,7 +8,6 @@ function rainyunrcs_ConfigOptions()
 	return [
 		["type" => "text", "name" => "plan_id", "description" => "*套餐ID(必填)", "key" => "plan_id"], 
 		["type" => "text", "name" => "os_id", "description" => "*系统镜像ID(必填)", "key" => "os_id"], 
-		["type" => "text", "name" => "try", "description" => "是否试用(true/false)", "default" => "false", "key" => "try"],
 		["type" => "text", "name" => "with_eip_num", "description" => "独立ip数(选填)", "default" => "0", "key" => "with_eip_num"],
 		["type" => "text", "name" => "with_coupon_id", "description" => "优惠券id(选填)", "default" => "0", "key" => "with_coupon_id"], 
 		["type" => "text", "name" => "disk_ssd_unit_price", "description" => "高速固态单价(每G每月)", "default" => "0.4", "key" => "disk_ssd_unit_price"],
@@ -451,9 +450,6 @@ function rainyunrcs_CreateAccount($params)
         $eip = "0";
     } else {
         $eip = $params["configoptions"]["with_eip_num"];
-    }
-    if($params["configoptions"]["try"]==="true"){
-        $try = $params["configoptions"]["try"];
     }
     if(empty($try)){
         $try = "false";
