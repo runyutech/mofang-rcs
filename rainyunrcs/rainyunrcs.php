@@ -166,7 +166,7 @@ function rainyunrcs_ChartData($params){
 
 		return $result;
 	}else{
-		return ['status'=>'error', 'msg'=>'数据获取失败'];
+		return ['status'=>'error', 'msg'=>'数据获取失败'.$res["message"]];
 	}
 }
 
@@ -205,7 +205,7 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 {
 	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
-		return "产品参数错误";
+		return "参数异常,可能是创建不成功";
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
@@ -388,7 +388,7 @@ function rainyunrcs_Reinstall($params)
 {
     $vserverid = rainyunrcs_GetServerid($params);
     if (empty($vserverid)) {
-        return "产品参数错误";
+        return "参数异常,可能是创建不成功";
     }
     if (empty($params["reinstall_os"])) {
         return "操作系统错误";
@@ -524,7 +524,7 @@ function rainyunrcs_Status($params)
 {
 	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
-		return "产品参数错误";
+		return "参数异常,可能是创建不成功";
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
@@ -568,7 +568,7 @@ function rainyunrcs_Sync($params)
 {
     $vserverid = rainyunrcs_GetServerid($params);
 	if(empty($vserverid)){
-		return '产品参数错误';
+		return '参数异常,可能是创建不成功';
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$url = $params["server_host"] . "/product/rcs/" . $vserverid;
@@ -614,7 +614,7 @@ function rainyunrcs_On($params)
 {
     $vserverid = rainyunrcs_GetServerid($params);
     if (empty($vserverid)) {
-        return "产品参数错误";
+        return "参数异常,可能是创建不成功";
     }
 
     // 获取服务器当前状态
@@ -645,7 +645,7 @@ function rainyunrcs_Off($params)
 {
 	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
-		return "产品参数错误";
+		return "参数异常,可能是创建不成功";
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/stop";
@@ -664,7 +664,7 @@ function rainyunrcs_Reboot($params)
 	if(empty($vserverid)){
         $vserverid = intval($params['old_configoptions']['customfields']['vserverid']);
         if (empty($vserverid)){
-            return '产品参数错误';
+            return '参数异常,可能是创建不成功';
         }
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
@@ -685,7 +685,7 @@ function rainyunrcs_ChangePackage($params)
 	if(empty($vserverid)){
         $vserverid = intval($params['old_configoptions']['customfields']['vserverid']);
         if (empty($vserverid)){
-            return '产品参数错误';
+            return '参数异常,可能是创建不成功';
         }
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
@@ -719,7 +719,7 @@ function rainyunrcs_Vnc($params){
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
 	if ($res["code"] != 200){
-	    return ["status" => "error", "msg" => "连接 VNC 请求失败，请稍后再试"];
+	    return ["status" => "error", "msg" => $res["message"]];
 	}
 	$data = $res["data"];
 	$urlcs =  isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
@@ -765,7 +765,7 @@ function rainyunrcs_ssh($params){
 function rainyunrcs_getCloudMonthFee($params){
 	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
-	    return ["status" => "error", "msg" => "产品参数错误"];
+	    return ["status" => "error", "msg" => "参数异常,可能是创建不成功"];
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
@@ -810,7 +810,7 @@ foreach ($res["data"]["EDiskList"] as $disk) {
 function rainyunrcs_getCloudtzMonthFee($params){
 	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
-	    return ["status" => "error", "msg" => "产品参数错误"];
+	    return ["status" => "error", "msg" => "参数异常,可能是创建不成功"];
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
@@ -920,7 +920,7 @@ $zzcost = ($new_total_cost/31)*$day-($total_cost/31)*$day;
 function rainyunrcs_edisk($params){
 	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
-	    return ["status" => "error", "msg" => "产品参数错误"];
+	    return ["status" => "error", "msg" => "参数异常,可能是创建不成功"];
 	}
 	if ($params["billingcycle"] == "ontrial"){
 	    return ["status" => "error", "msg" => "试用无法调整硬盘"];
@@ -1082,7 +1082,7 @@ $ml = [];
 function rainyunrcs_trafficlimit($params){
 	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
-	    return ["status" => "error", "msg" => "产品参数错误"];
+	    return ["status" => "error", "msg" => "参数异常,可能是创建不成功"];
 	}
     $post = input('post.');
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
@@ -1099,7 +1099,7 @@ function rainyunrcs_trafficlimit($params){
 function rainyunrcs_trafficcharge($params){
 	$vserverid = rainyunrcs_GetServerid($params);
 	if (empty($vserverid)) {
-	    return ["status" => "error", "msg" => "产品参数错误"];
+	    return ["status" => "error", "msg" => "参数异常,可能是创建不成功"];
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
@@ -1197,7 +1197,7 @@ function rainyunrcs_GetServerid($params)
 function rainyunrcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST", $header = [])
 {
 	$curl = curl_init();
-	if ($request == "GET") {
+	if ($request == "GET"&&$data) {
 		curl_setopt($curl, CURLOPT_URL, $url . "?" .http_build_query($data));
 	} else {
 		curl_setopt($curl, CURLOPT_URL, $url);
