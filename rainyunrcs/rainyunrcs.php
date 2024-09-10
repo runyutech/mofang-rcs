@@ -208,7 +208,7 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 		return "产品参数错误";
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 	if ($key == "NAT") {
 		return ["template" => "templates/NAT.html", "vars" => ["list" => $res["data"]["NatList"], "ip" => $res["data"]["Data"]["NatPublicIP"]]];
@@ -285,7 +285,7 @@ function rainyunrcs_addNat($params)
 	$post = input("post.");
 	$vserverid = rainyunrcs_GetServerid($params);
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/nat";
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/nat";
 	$post_data = "\n\n{\n    \"port_in\": " . trim($post["port_in"]) . ",\n    \"port_out\": " . trim($post["port_out"]) . ",\n    \"port_type\": \"" . trim($post["port_type"]) . "\"\n}\n\n";
 	$res = rainyunrcs_Curl($url, $post_data, 30, "POST", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
@@ -304,7 +304,7 @@ function rainyunrcs_delNat($params)
 	$post = input("post.");
 	$vserverid = rainyunrcs_GetServerid($params);
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/nat/?nat_id=" . trim($post["nat_id"]);
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/nat/?nat_id=" . trim($post["nat_id"]);
 	$res = rainyunrcs_Curl($url, [], 30, "DELETE", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
 		$description = sprintf("NAT转发删除成功");
@@ -334,11 +334,11 @@ function rainyunrcs_Renew($params)
         $duration = "1";
     }
     $header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-    $url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/renew";
+    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/renew";
     $post_data = "\n\n{\n    \"duration\": " . $duration . ",\n    \"with_coupon_id\": 0\n}\n\n";
     $res = rainyunrcs_Curl($url, $post_data, 30, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
-        $detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+        $detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
         $res1 = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
         $str = $res1["Data"]["ExpDate"];
         $str1 = $res1["data"]["Data"]["MonthPrice"];
@@ -351,7 +351,7 @@ function rainyunrcs_Renew($params)
             "billing_cycle" => $params["billingcycle"],
             "renew_duration" => $duration
         ];
-        writeLog($log);
+        writeLogRcs($log);
         return $log;
     } else {
         $log = [
@@ -362,12 +362,12 @@ function rainyunrcs_Renew($params)
             "billing_cycle" => $params["billingcycle"],
             "renew_duration" => $duration
         ];
-        writeLog($log);
+        writeLogRcs($log);
         return $log;
     }
 }
 
-function writeLog($log)
+function writeLogRcs($log)
 {
     // 获取当前运行目录
     $currentDir = getcwd();
@@ -394,7 +394,7 @@ function rainyunrcs_Reinstall($params)
         return "操作系统错误";
     }
     $header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-    $url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/changeos";
+    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/changeos";
     $post_data = "\n\n{\n    \"os_id\": " . $params["reinstall_os"] . "\n}\n\n";
     $res = rainyunrcs_Curl($url, $post_data, 30, "POST", $header);
     if ($res["code"] == 200) {
@@ -446,7 +446,7 @@ function rainyunrcs_CreateAccount($params)
         $duration = "1";
     }
     $header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-    $url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/";
+    $url = $params["server_host"] . "/product/rcs/";
     if ($params["configoptions"]["with_eip_num"] == null) {
         $eip = "0";
     } else {
@@ -463,7 +463,7 @@ function rainyunrcs_CreateAccount($params)
     if (isset($res["code"]) && $res["code"] == 200) {
         $server_id = $res["data"]["ID"];
         $sys_pwd = $res["data"]["DefaultPass"];
-        $detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $server_id;
+        $detail_url = $params["server_host"] . "/product/rcs/" . $server_id;
         $res1 = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
         $natip = $res1["data"]["Data"]["NatPublicIP"];
         $ipv4 = $res1["data"]["Data"]["MainIPv4"];
@@ -527,7 +527,7 @@ function rainyunrcs_Status($params)
 		return "产品参数错误";
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 	if (isset($res["code"]) && $res["code"] == 200) {
 		if ($res["data"]["Data"]["Status"] == "running") {
@@ -624,7 +624,7 @@ function rainyunrcs_On($params)
     }
 
     $header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-    $url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/start";
+    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/start";
     $post_data = [];
     $post_data["id"] = $vserverid;
     $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
@@ -648,7 +648,7 @@ function rainyunrcs_Off($params)
 		return "产品参数错误";
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/stop";
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/stop";
 	$post_data = [];
 	$post_data["id"] = $vserverid;
 	$res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
@@ -668,7 +668,7 @@ function rainyunrcs_Reboot($params)
         }
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid . "/reboot";
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/reboot";
 	$post_data = [];
 	$post_data["id"] = $vserverid;
 	$res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
@@ -768,7 +768,7 @@ function rainyunrcs_getCloudMonthFee($params){
 	    return ["status" => "error", "msg" => "产品参数错误"];
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 	$disk_ssd_unit_price = $params["configoptions"]["disk_ssd_unit_price"] ?: 0.4;
 	$disk_hdd_unit_price = $params["configoptions"]["disk_hdd_unit_price"] ?: 0.1;
@@ -813,7 +813,7 @@ function rainyunrcs_getCloudtzMonthFee($params){
 	    return ["status" => "error", "msg" => "产品参数错误"];
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 	$disk_ssd_unit_price = $params["configoptions"]["disk_ssd_unit_price"] ?: 0.4;
 	$disk_hdd_unit_price = $params["configoptions"]["disk_hdd_unit_price"] ?: 0.1;
@@ -926,7 +926,7 @@ function rainyunrcs_edisk($params){
 	    return ["status" => "error", "msg" => "试用无法调整硬盘"];
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 	$disk_ssd_unit_price = $params["configoptions"]["disk_ssd_unit_price"] ?: 0.4;
 	$disk_hdd_unit_price = $params["configoptions"]["disk_hdd_unit_price"] ?: 0.1;
@@ -1058,7 +1058,7 @@ $ml = [];
         return ["status" => "error", "msg" => "调整了个寂寞"];
     }
     $wzml = ["actions"=>$ml];
-	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid ."/edisk";
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid ."/edisk";
 	$res = rainyunrcs_Curl($url, json_encode($wzml), 10, "POST", $header);
 	if($res["code"] == 200){
 	    Db::table(config('database.prefix') . 'clients')->where('id', $params['uid'])->setDec('credit', $zzcost);
@@ -1086,7 +1086,7 @@ function rainyunrcs_trafficlimit($params){
 	}
     $post = input('post.');
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid ."/traffic/limit";
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid ."/traffic/limit";
 	$data = ["day_traffic_in_gb"=>(int)$post["day_traffic_in_gb"],"traffic_limit"=>(int)$post["traffic_limit"]];
 	$res = rainyunrcs_Curl($url, json_encode($data), 10, "POST", $header);
 	if($res["code"] == 200){
@@ -1102,7 +1102,7 @@ function rainyunrcs_trafficcharge($params){
 	    return ["status" => "error", "msg" => "产品参数错误"];
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
-	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
     $post = input('post.');
     // $traffic300 = ($params["configoptions"]["traffic300"] ?: $res["data"]["Data"]["Plan"]["traffic_price"]["300"]) ?: 15;
@@ -1130,7 +1130,7 @@ function rainyunrcs_trafficcharge($params){
     if($credit < $money){
         return ['status'=>'error', 'msg'=>"余额不足，请先充值余额"];
     }
-	$url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid ."/traffic/charge";
+	$url = $params["server_host"] . "/product/rcs/" . $vserverid ."/traffic/charge";
 	$data = ["traffic_in_gb"=>$traffic_in_gb];
 	$res = rainyunrcs_Curl($url, json_encode($data), 10, "POST", $header);
 	if($res["code"] == 200){
@@ -1198,16 +1198,7 @@ function rainyunrcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST"
 {
 	$curl = curl_init();
 	if ($request == "GET") {
-		$s = "";
-		if (!empty($data)) {
-			foreach ($data as $k => $v) {
-				$s .= $k . "=" . urlencode($v) . "&";
-			}
-		}
-		if ($s) {
-			$s = "?" . trim($s, "&");
-		}
-		curl_setopt($curl, CURLOPT_URL, $url . $s);
+		curl_setopt($curl, CURLOPT_URL, $url . "?" .http_build_query($data));
 	} else {
 		curl_setopt($curl, CURLOPT_URL, $url);
 	}
@@ -1225,7 +1216,7 @@ function rainyunrcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST"
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_POST, 1);
 		if (is_array($data)) {
-			curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($data));
+			curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
 		} else {
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
 		}
@@ -1234,7 +1225,7 @@ function rainyunrcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST"
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_CUSTOMREQUEST, strtoupper($request));
 		if (is_array($data)) {
-			curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($data));
+			curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
 		} else {
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
 		}
