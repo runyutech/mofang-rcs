@@ -36,8 +36,8 @@ function rainyunrcs_Chart(){
 		'cpu'=>[
 			'title'=>'CPU 占用',
 		],
-		'ram'=>[
-			'title'=>'剩余内存',
+		'memory'=>[
+			'title'=>'内存用量',
 		],
 		'disk'=>[
 			'title'=>'磁盘读写',
@@ -70,7 +70,8 @@ function rainyunrcs_ChartData($params){
 	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/monitor/?start_date=".$start."&end_date=".$end;
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
-
+	$detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	$detail_res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
 	// var_dump($res);
 	if($res['code'] == 200){
 
@@ -152,22 +153,28 @@ function rainyunrcs_ChartData($params){
 		}
 
 		// 获取内存数据
-		if($params['chart']['type'] == 'ram') {
+		if($params['chart']['type'] == 'memory') {
 			// 给前端传数据单位
 			$result['data']['unit'] = 'GB';
-			$result['data']['chart_type'] = 'line';
+			$result['data']['chart_type'] = 'bar';
 			$result['data']['list'] = [];
-			$result['data']['label'] = ['剩余内存 (GB)'];
+			$result['data']['label'] = ["总量(GB)",'已用 (GB)'];
 			// 获取数据
 			$memIndex = array_search("freemem", $res["data"]["Columns"]);
 			foreach($data as $dataInfo) {
 				// 取得这坨的时间戳
 				$timestamp = $dataInfo[$timeIndex];
 				// 添加数据
-				if($dataInfo[$memIndex]) $result['data']['list'][0][] = [
+				if($dataInfo[$memIndex]){
+				$result['data']['list'][0][] = [
 					'time'=>date('Y-m-d H:i:s', $timestamp),
-					'value'=>round($dataInfo[$memIndex]*100/1024/1024/1024)/100
+					'value'=>round($detail_res["data"]["Data"]["UsageData"]["MaxMem"]*100/1024/1024/1024)/100
 				];
+				$result['data']['list'][1][] = [
+					'time'=>date('Y-m-d H:i:s', $timestamp),
+					'value'=>round(($detail_res["data"]["Data"]["UsageData"]["MaxMem"]-$dataInfo[$memIndex])*100/1024/1024/1024)/100
+				];
+				} 
 			}
 		}
 
