@@ -7,7 +7,7 @@
                     <li>剩余流量：{$Traffic}</li>
                     <li>今日已用：{$TrafficToday} </li>
                     <li>{if $billingcycle == "ontrial"}当前为试用期间，默认50G流量，续费后自动补充，{/if}</li>
-                    <li>流量为产品公网上传下载共用流量，剩余流量支持叠加到次月， 每月自动补充1024GB，流量不足将限制到5M，如需避免流量使用过多，可以限制流量</li>
+                    <li>流量为产品公网上传下载共用流量，剩余流量支持叠加到次月， 每月自动补充{$list.Data.Plan.traffic_base_gb}GB，流量不足将限制到5M，如需避免流量使用过多，可以限制流量</li>
                     <li>下次补充时间 {$time}</li>
                 </ul>
             </div>
