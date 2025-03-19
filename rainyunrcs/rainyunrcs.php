@@ -493,6 +493,8 @@ function rainyunrcs_CreateAccount($params)
         } else {
             $username = "root";
         }
+		$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/tag";
+		$res = rainyunrcs_Curl($url, json_encode(["tag_name"=>$params["domain"]]), 30, "PATCH", $header);
 		// 存入IP
 		$ip = [];
 		if($res1["data"]["Data"]["MainIPv4"] == "-"){
@@ -621,6 +623,8 @@ function rainyunrcs_Sync($params)
             $update['username'] = "root";
         }
 		Db::name('host')->where('id', $params['hostid'])->update($update);
+		$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/tag";
+		$res = rainyunrcs_Curl($url, json_encode(["tag_name"=>$params["domain"]]), 30, "PATCH", $header);
 		return ['status'=>'success', 'msg'=>$res['message']];
 	}else{
 		return ['status'=>'error', 'msg'=>$res['message'] ?: '同步失败'];
@@ -1213,6 +1217,14 @@ function rainyunrcs_FiveMinuteCron() {
   			$update = [];
   			$update['bwusage'] = round($res["data"]["Data"]["TrafficBytesToday"]/ 1073741824, 2);
   			$update['bwlimit'] = intval(($res["data"]["Data"]["TrafficBytes"]+$res["data"]["Data"]["TrafficBytesToday"])/ 1073741824);
+  			if($update['bwlimit'] <= 1 && $res["data"]["Data"]["Plan"]["traffic_base_gb"] > 0){
+  			    if($update['bwusage'] <= 1){
+  			        $update['bwusage'] = 1;
+  			        $update['bwlimit'] = 1;
+  			    }else{
+  			        $update['bwlimit'] = $update['bwusage'];
+  			    }
+  			}
   			Db::name('host')->where('id', $v['id'])->update($update);
   		}
     }
@@ -1283,7 +1295,7 @@ function rainyunrcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST"
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_HTTPGET, 1);
 	}
-	if (strtoupper($request) == "POST"  || strtoupper($request) == "PATCH") {
+	if (strtoupper($request) == "POST") {
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_POST, 1);
 		if (is_array($data)) {
@@ -1292,7 +1304,7 @@ function rainyunrcs_Curl($url = "", $data = [], $timeout = 30, $request = "POST"
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
 		}
 	}
-	if (strtoupper($request) == "PUT" || strtoupper($request) == "DELETE") {
+	if (strtoupper($request) == "PUT" || strtoupper($request) == "DELETE" || strtoupper($request) == "PATCH") {
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_CUSTOMREQUEST, strtoupper($request));
 		if (is_array($data)) {
