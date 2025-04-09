@@ -449,28 +449,45 @@ function rainyunrcs_CreateAccount($params)
         $duration = "6";
     } elseif ($params["billingcycle"] == "ontrial") {
         $duration = "1";
-        $try = "true";
+        $try = true;
     } else {
         $duration = "1";
     }
     $header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
     $url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/";
-    if ($params["configoptions"]["with_eip_num"] == null) {
-        $eip = "0";
-    } else {
-        $eip = $params["configoptions"]["with_eip_num"];
-    }
+
     if($params["configoptions"]["try"]==="true"){
-        $try = $params["configoptions"]["try"];
+        $try = true;
     }
     if(empty($try)){
-        $try = "false";
+        $try = false;
     }
     $filtered = array_filter($params["configoptions"], function($key) {
-        return strpos($key, 'with_eip_num') === 0 || $key === 'with_eip_num';
+        return strpos($key, 'with_eip_num_') === 0 || $key === 'with_eip_num';
     }, ARRAY_FILTER_USE_KEY);
+    $eip = "0";
+    $eip_flag = "";
+    if(isset($filtered["with_eip_num"]) && $filtered["with_eip_num"] != 0){
+        $eip_flag = "";
+        $eip = $params["configoptions"]["with_eip_num"];
+    }elseif(!empty($filtered)){
+        foreach ($filtered as $k=>$v){
+            if($v!=0){
+                $eip_flag = str_replace("with_eip_num_", "", $k);
+                $eip = $v;
+                break;
+            }
+        }
+    }
     $with_eip_flags = "";
-    $post_data = "\n{\n    \"duration\": " . $duration . ",\n    \"plan_id\": " . $params["configoptions"]["plan_id"] . ",\n    \"os_id\": " . $params["configoptions"]["os_id"] . ",\n    \"try\": " . $try . ",\n    \"with_eip_flags\": \"\",\n    \"with_eip_num\": " . $eip . "\n}\n";
+    $post_data = json_encode([
+        "duration"=>(int)$duration,
+        "plan_id"=>(int)$params["configoptions"]["plan_id"],
+        "os_id"=>(int)$params["configoptions"]["os_id"],
+        "try" => $try,
+        "with_eip_flags"=>$eip_flag,
+        "with_eip_num"=>(int)$eip
+    ]);
     $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
         $server_id = $res["data"]["ID"];
@@ -539,7 +556,7 @@ function rainyunrcs_CreateAccount($params)
         \think\Db::name("host")->where("id", $params["hostid"])->update($update);
         return "ok";
     } else {
-        return ["status" => "error", "msg" => "开通失败，原因：" . $res["message"]];
+        return ["status" => "error", "msg" => "开通失败，原因：" . $res["message"].$post_data];
     }
 }
 
