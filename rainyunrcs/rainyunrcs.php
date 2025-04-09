@@ -466,6 +466,10 @@ function rainyunrcs_CreateAccount($params)
     if(empty($try)){
         $try = "false";
     }
+    $filtered = array_filter($params["configoptions"], function($key) {
+        return strpos($key, 'with_eip_num') === 0 || $key === 'with_eip_num';
+    }, ARRAY_FILTER_USE_KEY);
+    $with_eip_flags = "";
     $post_data = "\n{\n    \"duration\": " . $duration . ",\n    \"plan_id\": " . $params["configoptions"]["plan_id"] . ",\n    \"os_id\": " . $params["configoptions"]["os_id"] . ",\n    \"try\": " . $try . ",\n    \"with_eip_flags\": \"\",\n    \"with_eip_num\": " . $eip . "\n}\n";
     $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
@@ -736,10 +740,10 @@ function rainyunrcs_ChangePackage($params)
 	}
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	if(isset($params['configoptions_upgrade']['with_eip_num'])){
-	    $detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $vserverid;
+	    $detail_url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	    $res = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
-		$ip_num = count($res["data"]["EIPList"])?:$params['configoptions']['with_eip_num'];
-		$old_ip_num = $params['old_configoptions']['with_eip_num'];
+		$ip_num = $params['configoptions']['with_eip_num'];
+		$old_ip_num = count($res["data"]["EIPList"])?:$params['old_configoptions']['with_eip_num'];
 		if($ip_num > $old_ip_num){
 		    $url = $params["server_host"] . "/product/rcs/" . $vserverid . "/eip/";
 		    $post_data = json_encode(["with_ip_num"=>intval($ip_num - $old_ip_num)]);
