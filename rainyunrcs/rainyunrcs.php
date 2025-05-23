@@ -26,7 +26,8 @@ function rainyunrcs_ConfigOptions()
 		["type" => "text", "name" => "trafficdiy1", "description" => "流量(自定义1)(old)", "default" => "100|15", "key" => "trafficdiy1"],
 		["type" => "text", "name" => "trafficdiy2", "description" => "流量(自定义2)(old)", "key" => "trafficdiy2"],
 		["type" => "text", "name" => "trafficdiy3", "description" => "流量(自定义3)(old)", "key" => "trafficdiy3"],
-		["type" => "yesno", "name" => "是否启用新硬盘配置", "description" => "是否启用新版本的硬盘包配置(暂时无法使用)",'default'=>'1', "key" => "new_disk"]
+		["type" => "yesno", "name" => "是否启用新硬盘配置", "description" => "是否启用新版本的硬盘包配置(暂时无法使用)",'default'=>'1', "key" => "new_disk"],
+		["type" => "text", "name" => "add_disk_size", "description" => "系统盘附加容量", "key" => "add_disk_size"],
 	];
 }
 
@@ -486,8 +487,9 @@ function rainyunrcs_CreateAccount($params)
         "os_id"=>(int)$params["configoptions"]["os_id"],
         "try" => $try,
         "with_eip_flags"=>$eip_flag,
-        "with_eip_num"=>(int)$eip
+        "with_eip_num"=>(int)$eip,
     ]);
+    if(isset($params["configoptions"]["add_disk_size"]) && empty($params["configoptions"]["add_disk_size"]) && $params["configoptions"]["add_disk_size"] != "0") $post_data["add_disk_size"] = (int)$params["configoptions"]["add_disk_size"];
     $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
         $server_id = $res["data"]["ID"];
