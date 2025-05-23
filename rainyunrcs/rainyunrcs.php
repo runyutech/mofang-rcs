@@ -481,16 +481,16 @@ function rainyunrcs_CreateAccount($params)
         }
     }
     $with_eip_flags = "";
-    $post_data = json_encode([
+    $post_data = [
         "duration"=>(int)$duration,
         "plan_id"=>(int)$params["configoptions"]["plan_id"],
         "os_id"=>(int)$params["configoptions"]["os_id"],
         "try" => $try,
         "with_eip_flags"=>$eip_flag,
         "with_eip_num"=>(int)$eip,
-    ]);
+    ];
     if(isset($params["configoptions"]["add_disk_size"]) && empty($params["configoptions"]["add_disk_size"]) && $params["configoptions"]["add_disk_size"] != "0") $post_data["add_disk_size"] = (int)$params["configoptions"]["add_disk_size"];
-    $res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
+    $res = rainyunrcs_Curl($url, json_encode($post_data), 10, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
         $server_id = $res["data"]["ID"];
         $sys_pwd = $res["data"]["DefaultPass"];
