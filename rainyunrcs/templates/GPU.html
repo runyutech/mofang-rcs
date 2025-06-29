@@ -1,0 +1,159 @@
+    <style>
+        /* 开关按钮样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        
+        /* 添加一个小巧的加载指示器 */
+        .loading {
+            display: none;
+            position: absolute;
+            right: -25px;
+            top: 2px;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+<div>
+    <div class="card mb-1">
+        <div class="card-body">
+            <h4 class="text-primary mb-2">信息</h4>
+            <div class="mb-50">
+                <ul class="pl-2 text-secondary">
+                    <li>远程连接地址 (RDP/SSH)：
+                        {if $list.Data.MainIPv4 == "-"}
+                            开机后生成
+                        {else /}
+                            {$list.Data.MainIPv4}
+                        {/if}
+                    </li>
+                    <li>剩余开机时长：{$list.Data.WebbarMinutes}分钟</li>
+                    <li>独立显卡：<label class="switch"><input type="checkbox"id="toggleSwitch"{if $list.Data.DGPUEnable}checked{/if}><span class="slider"></span><span class="loading"></span></label></li>
+                    <li>剩余时长支持叠加到次月，时长用完后自动关机<br>每月自动赠送5小时，下次赠送时间 {$list.Data.WebbarResetDate|date='Y年m月d日 H:i:s'}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+$(document).ready(function(){
+    $("button:contains('订购流量')").text("加钟+");
+
+    $("div").each(function() {
+        var $this = $(this);
+        var text = $this.contents().filter(function() {
+            return this.nodeType === 3 && this.textContent.trim().startsWith("剩余流量");
+        });
+        var usedTrafficText = $this.contents().filter(function() {
+            return this.nodeType === 3 && this.textContent.trim().startsWith("已用流量：");
+        });
+
+        if (text.length > 0) {
+            var $span = text.next('span');
+            text.prev().prevAll().remove();
+            text.replaceWith("剩余时长：");
+            $span.text(function(index, text) {
+                var number = text.match(/[\d.]+/);
+                return number ? number[0] + '分钟' : text;
+            });
+        }
+        if (usedTrafficText.length > 0) {
+            usedTrafficText.remove();
+        }
+    });
+    let isOn = false;
+    $('#toggleSwitch').change(function() {
+        const $switch = $(this);
+        const $loading = $switch.siblings('.loading');
+        $loading.show();
+        $switch.prop('disabled', true);
+        isOn = $switch.is(':checked');
+        Swal.fire({
+            title: '注意',
+            text: '开关独立显卡将影响网吧模式时长/计费并对应不同的使用场景，是否继续操作？',
+            type: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#6e9aff',
+            cancelButtonColor: '#d33',
+            confirmButtonText: '确认修复',
+            cancelButtonText: '取消'
+        }).then((result) => {
+            if (result.value) {
+                $.ajax({
+                    url: '{$MODULE_CUSTOM_API}',
+                    type: 'POST',
+                    data: {
+                        state: isOn ? 'on' : 'off',
+                        func: "toggle_dgpu"
+                    },
+                    success: function(response) {
+                        if(response.status === 200){
+                            location.reload();
+                        }else{
+                            $switch.prop('checked', !isOn);
+                            Swal.fire("失败", response.msg, "error");
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $switch.prop('checked', !isOn);
+                    },
+                    complete: function() {
+                        $loading.hide();
+                        $switch.prop('disabled', false);
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
