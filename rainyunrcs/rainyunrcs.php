@@ -762,7 +762,7 @@ function rainyunrcs_TerminateAccount($params){
 	$post_data = [];
 	$post_data["id"] = $vserverid;
 	$res = rainyunrcs_Curl($url, $post_data, 10, "POST", $header);
-	if(isset($res['code']) && $res['code'] == 200){
+	if(isset($res['code']) && ($res['code'] == 200 || $res['code'] == 10005)){
 		// 删除成功后
 		$customid = Db::name('customfields')
 					->where('type', 'product')
