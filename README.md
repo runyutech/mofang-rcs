@@ -8,6 +8,4 @@ https://github.com/runyutech/mofang-rcs/releases
 在魔方public/plugins/servers目录解压release.zip即可完成安装
 
 更多请见
-https://forum.rainyun.com/t/topic/5552
-
-
+https://forum.rainyun.com/t/topic/13292
