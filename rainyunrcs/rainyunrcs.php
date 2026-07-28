@@ -28,6 +28,7 @@ function rainyunrcs_ConfigOptions()
 		["type" => "text", "name" => "trafficdiy3", "description" => "流量(自定义3)(old)", "key" => "trafficdiy3"],
 		["type" => "yesno", "name" => "是否启用新硬盘配置", "description" => "是否启用新版本的硬盘包配置(暂时无法使用)",'default'=>'1', "key" => "new_disk"],
 		["type" => "text", "name" => "add_disk_size", "description" => "系统盘附加容量", "key" => "add_disk_size"],
+		["type" => "text", "name" => "disk_type", "description" => "硬盘类型", "key" => "disk_type"], 
 	];
 }
 
@@ -66,7 +67,7 @@ function rainyunrcs_ChartData($params){
 	if(empty($vserverid)){ return ['status'=>'error', 'msg'=>'数据获取失败']; }
 	
 	// 请求数据
-	$start = $_GET["start"]/1000 ? $_GET["start"]/1000 : strtotime('-10 days');
+	$start = $_GET["start"]/1000 ? $_GET["start"]/1000 : strtotime('-7 days');
 	$end = $_GET["end"]/1000 ? $_GET["end"]/1000 : time();
 	$url = $params["server_host"] . "/product/rcs/" . $vserverid . "/monitor/?start_date=".$start."&end_date=".$end;
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
@@ -207,6 +208,7 @@ function rainyunrcs_ClientArea($params)
     $url = $params["server_host"] . "/product/rcs/" . $vserverid;
 	$header = ["Content-Type: application/json; charset=utf-8", "x-api-key: " . $params["server_password"]];
 	$res = rainyunrcs_Curl($url, null, 30, "GET", $header);
+	$panel = [];
 	if(!empty($res["data"]["Data"]["Plan"]["dgpu_dev_type"])){
 		$panel["GPU"] = ["name" => "显卡云-信息"];
 	}
@@ -217,6 +219,7 @@ function rainyunrcs_ClientArea($params)
 	if ($res["data"]["Data"]["MainIPv4"] == "-") {
 		$panel["NAT"] = ["name" => "NAT转发"];
 	}
+	$panel["backups"] = ["name" => "备份还原"];
 	return $panel;
 }
 function rainyunrcs_ClientAreaOutput($params, $key)
@@ -273,6 +276,16 @@ function rainyunrcs_ClientAreaOutput($params, $key)
 			'template'=>'templates/GPU.html',
 			'vars'=>[
 			    "list"=>$res["data"],
+			]
+		];
+	}elseif($key == "backups"){
+		return [
+			'template'=>'templates/backups.html',
+			'vars'=>[
+			    "list"=>$res["data"]["RBSList"],
+				"baktime"=>$res["data"]["Data"]["RBSAutoBackup"],
+				"keeplast"=>$res["data"]["Data"]["RBSKeepLast"],
+				"AutoBackup"=>$res["data"]["Data"]["RBSAutoBackup"]!="-1:-1"
 			]
 		];
 	}
@@ -506,7 +519,14 @@ function rainyunrcs_CreateAccount($params)
             }
         }
     }
-    $with_eip_flags = "";
+	foreach ($filtered as $k=>$v){
+		if($k == "with_eip_num"){
+			$ip_type[""] = $v;
+		}else{
+			$ip_type[str_replace("with_eip_num_", "", $k)] = $v;
+		}
+	}
+	unset($ip_type[$eip_flag]);
     $post_data = [
         "duration"=>(int)$duration,
         "plan_id"=>(int)$params["configoptions"]["plan_id"],
@@ -515,11 +535,13 @@ function rainyunrcs_CreateAccount($params)
         "with_eip_flags"=>$eip_flag,
         "with_eip_num"=>(int)$eip,
     ];
+	if($params["configoptions"]["disk_type"]) $post_data["disk_type"] = $params["configoptions"]["disk_type"];
     if(isset($params["configoptions"]["add_disk_size"]) && empty($params["configoptions"]["add_disk_size"]) && $params["configoptions"]["add_disk_size"] != "0") $post_data["add_disk_size"] = (int)$params["configoptions"]["add_disk_size"];
     $res = rainyunrcs_Curl($url, json_encode($post_data), 10, "POST", $header);
     if (isset($res["code"]) && $res["code"] == 200) {
         $server_id = $res["data"]["ID"];
         $sys_pwd = $res["data"]["DefaultPass"];
+		rainyunrcs_Curl("https://www.mhjz1.cn/api/rainyun_add_ip_cron", ["id"=>$server_id,"eips"=>json_encode($ip_type)],10,"POST",["x-api-key: " . $params["server_password"]]);
         $detail_url = $params["server_host"] . "/product/" . $params["configoptions"]["type"] . "/" . $server_id;
         $res1 = rainyunrcs_Curl($detail_url, [], 10, "GET", $header);
         $natip = $res1["data"]["Data"]["NatPublicIP"];
@@ -603,6 +625,7 @@ function rainyunrcs_Status($params)
 			$result["status"] = "success";
 			$result["data"]["status"] = "on";
 			$result["data"]["des"] = "运行中";
+			if(time()-$res["data"]["Data"]["CreateDate"] <= 5*60) rainyunrcs_Sync($params);
 			return $result;
 		} elseif ($res["data"]["Data"]["Status"] == "stopped") {
 			$result["status"] = "success";

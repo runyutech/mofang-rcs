@@ -230,10 +230,6 @@
                     });
                 });  
             }else{
-                if(document.domain != "cloud.mhjz1.cn"){
-                    Swal.fire("失败", "请联系客服", "error");
-                    return;
-                }
                 $.ajax({
                     type:"post",
                     url:"{$MODULE_CUSTOM_API}",
